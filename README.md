@@ -18,9 +18,8 @@ API healthcheck: `http://localhost/api/v1/health/ready`.
 
 ## Текущий этап
 
-Сервис включает PostgreSQL, Alembic, FastAPI, React Admin и первую миграцию
-справочников. Worker и VK listener будут добавлены вместе с обработкой и
-сохранением входящих событий.
+Сервис включает PostgreSQL, Alembic, FastAPI, React Admin и VK Long Poll listener.
+Listener обнаруживает беседы и идемпотентно синхронизирует их участников.
 
 Архитектура описана в [`docs/architecture.md`](docs/architecture.md), результаты
 проверки VK API — в [`docs/vk-spike.md`](docs/vk-spike.md), схема данных — в

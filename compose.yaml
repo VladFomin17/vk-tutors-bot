@@ -44,6 +44,17 @@ services:
       timeout: 5s
       retries: 10
 
+  vk-listener:
+    build: ./backend
+    command: ["python", "-m", "app.integrations.vk.listener"]
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://vk_tutors:vk_tutors@postgres:5432/vk_tutors}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
   frontend:
     build: ./frontend
     ports:

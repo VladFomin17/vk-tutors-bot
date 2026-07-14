@@ -11,12 +11,13 @@ COPY pyproject.toml alembic.ini logging.json ./
 COPY app ./app
 COPY alembic ./alembic
 
-RUN pip install --no-cache-dir . && chown -R app:app /app
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install . && chown -R app:app /app
 
 FROM base AS test
 
 COPY tests ./tests
-RUN pip install --no-cache-dir ".[dev]"
+RUN --mount=type=cache,target=/root/.cache/pip pip install ".[dev]"
 
 USER app
 
