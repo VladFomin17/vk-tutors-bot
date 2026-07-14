@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     database_url: str = (
         "postgresql+asyncpg://vk_tutors:vk_tutors@localhost:5432/vk_tutors"
     )
+    admin_bootstrap_username: str = Field(default="admin", min_length=1, max_length=100)
+    admin_bootstrap_password: SecretStr | None = None
+    session_cookie_name: str = Field(default="vk_tutors_session", min_length=1, max_length=100)
+    session_ttl_hours: int = Field(default=12, ge=1, le=168)
+    session_cookie_secure: bool = False
     vk_group_id: int | None = Field(default=None, gt=0)
     vk_access_token: SecretStr | None = None
     vk_api_version: str = "5.199"

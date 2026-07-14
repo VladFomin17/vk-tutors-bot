@@ -20,6 +20,9 @@ API healthcheck: `http://localhost/api/v1/health/ready`.
 
 Сервис включает PostgreSQL, Alembic, FastAPI, React Admin и VK Long Poll listener.
 Listener обнаруживает беседы и идемпотентно синхронизирует их участников.
+Административная панель защищена логином и HttpOnly-сессией. Перед входом задайте
+`ADMIN_BOOTSTRAP_PASSWORD` в `.env`; при работе через HTTPS также установите
+`SESSION_COOKIE_SECURE=true`.
 
 Архитектура описана в [`docs/architecture.md`](docs/architecture.md), результаты
 проверки VK API — в [`docs/vk-spike.md`](docs/vk-spike.md), схема данных — в

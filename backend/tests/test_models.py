@@ -8,6 +8,7 @@ def test_directory_models_are_registered() -> None:
     configure_mappers()
 
     assert set(Base.metadata.tables) == {
+        "auth_sessions",
         "chat_members",
         "study_groups",
         "vk_chats",
