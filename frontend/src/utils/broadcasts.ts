@@ -14,3 +14,24 @@ export function sortBroadcasts(broadcasts: Broadcast[], order: BroadcastSort): B
     return Date.parse(right.created_at) - Date.parse(left.created_at);
   });
 }
+
+export function isBroadcastDraftDirty(
+  draft: {
+    title: string;
+    message: string;
+    link: string;
+    deadline: string;
+    confirmationType: string;
+    selectedGroupCount: number;
+  },
+  initialDeadline: string,
+): boolean {
+  return Boolean(
+    draft.title.trim()
+    || draft.message.trim()
+    || draft.link.trim()
+    || draft.deadline !== initialDeadline
+    || draft.confirmationType !== "any_message"
+    || draft.selectedGroupCount > 0,
+  );
+}

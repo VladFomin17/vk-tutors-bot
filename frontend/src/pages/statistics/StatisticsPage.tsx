@@ -3,20 +3,21 @@ import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import HowToRegOutlinedIcon from "@mui/icons-material/HowToRegOutlined";
 import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import TaskAltOutlinedIcon from "@mui/icons-material/TaskAltOutlined";
-import { Alert, Grid, LinearProgress, Stack, Typography } from "@mui/material";
+import { Grid, LinearProgress, Stack, Typography } from "@mui/material";
 import { BarChart } from "@mui/x-charts/BarChart";
 import { LineChart } from "@mui/x-charts/LineChart";
 import { Title, useGetOne } from "react-admin";
 
 import { EmptyState } from "../../components/EmptyState";
 import { PageHeader } from "../../components/PageHeader";
+import { QueryErrorState } from "../../components/QueryErrorState";
 import { SectionCard } from "../../components/SectionCard";
 import { StatCard } from "../../components/StatCard";
 import type { Statistics } from "../../types/entities";
 
 export function StatisticsPage() {
-  const { data, isPending, error } = useGetOne<Statistics>("statistics", { id: "current" });
-  if (error) return <Alert severity="error">Не удалось загрузить статистику. Обновите страницу.</Alert>;
+  const { data, isPending, error, refetch } = useGetOne<Statistics>("statistics", { id: "current" });
+  if (error) return <QueryErrorState message="Не удалось загрузить статистику." onRetry={refetch} />;
   if (isPending || !data) return <LinearProgress />;
   const groupPercentages = data.group_activity.map((group) => group.recipient_count === 0 ? 0 : Math.round(group.response_count / group.recipient_count * 100));
 

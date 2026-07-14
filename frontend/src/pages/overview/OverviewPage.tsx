@@ -25,6 +25,7 @@ import { Link } from "react-router-dom";
 
 import { EmptyState } from "../../components/EmptyState";
 import { PageHeader } from "../../components/PageHeader";
+import { QueryErrorState } from "../../components/QueryErrorState";
 import { SectionCard } from "../../components/SectionCard";
 import { StatCard } from "../../components/StatCard";
 import { BroadcastStatusChip } from "../../components/StatusChip";
@@ -32,9 +33,9 @@ import type { Broadcast, Statistics, VkChat } from "../../types/entities";
 import { formatDateTime } from "../../utils/date";
 
 export function OverviewPage() {
-  const { data: chats = [] } = useGetList<VkChat>("vk_chats");
-  const { data: broadcasts = [], isPending: broadcastsPending } = useGetList<Broadcast>("broadcasts");
-  const { data: statistics, isPending: statisticsPending } = useGetOne<Statistics>("statistics", { id: "current" });
+  const { data: chats = [], error: chatsError, refetch: refetchChats } = useGetList<VkChat>("vk_chats");
+  const { data: broadcasts = [], isPending: broadcastsPending, error: broadcastsError, refetch: refetchBroadcasts } = useGetList<Broadcast>("broadcasts");
+  const { data: statistics, isPending: statisticsPending, error: statisticsError, refetch: refetchStatistics } = useGetOne<Statistics>("statistics", { id: "current" });
   const now = Date.now();
   const active = broadcasts.filter((broadcast) => new Date(broadcast.deadline).getTime() >= now);
   const recent = [...broadcasts].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()).slice(0, 5);
@@ -45,6 +46,7 @@ export function OverviewPage() {
     <Stack spacing={3}>
       <Title title="Обзор" />
       <PageHeader title="Обзор" description="Состояние рассылок и подключённых учебных групп." action={{ label: "Создать рассылку", to: "/broadcasts/create" }} />
+      {chatsError || broadcastsError || statisticsError ? <QueryErrorState message="Не удалось полностью загрузить обзор." onRetry={() => Promise.all([refetchChats(), refetchBroadcasts(), refetchStatistics()])} /> : null}
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, xl: 2.4 }}><StatCard icon={<GroupsOutlinedIcon />} label="Учебные группы" loading={statisticsPending} value={statistics?.overview.total_groups ?? 0} /></Grid>
         <Grid size={{ xs: 12, sm: 6, xl: 2.4 }}><StatCard icon={<PeopleOutlinedIcon />} label="Студенты" loading={statisticsPending} value={statistics?.overview.total_students ?? 0} /></Grid>

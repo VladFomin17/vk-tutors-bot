@@ -23,6 +23,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { EmptyState } from "../../components/EmptyState";
 import { PageHeader } from "../../components/PageHeader";
+import { QueryErrorState } from "../../components/QueryErrorState";
 import { SectionCard } from "../../components/SectionCard";
 import type { ChatMember, MemberRole, StudyGroup, VkChat } from "../../types/entities";
 
@@ -39,11 +40,11 @@ export function GroupShowPage() {
   const notify = useNotify();
   const [updateMember] = useUpdate();
   const [search, setSearch] = useState("");
-  const { data: groups = [] } = useGetList<StudyGroup>("study_groups");
-  const { data: chats = [] } = useGetList<VkChat>("vk_chats");
+  const { data: groups = [], error: groupsError, refetch: refetchGroups } = useGetList<StudyGroup>("study_groups");
+  const { data: chats = [], error: chatsError, refetch: refetchChats } = useGetList<VkChat>("vk_chats");
   const group = groups.find((item) => item.id === groupId);
   const chat = chats.find((item) => item.study_group_id === groupId);
-  const { data: members = [], isPending } = useGetList<ChatMember>("chat_members", { filter: { chat_id: chat?.id } }, { enabled: chat !== undefined });
+  const { data: members = [], isPending, error: membersError, refetch: refetchMembers } = useGetList<ChatMember>("chat_members", { filter: { chat_id: chat?.id } }, { enabled: chat !== undefined });
 
   const filtered = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("ru-RU");
@@ -62,6 +63,7 @@ export function GroupShowPage() {
     <Stack spacing={3}>
       <Title title={group?.name ?? "Участники группы"} />
       <PageHeader title={group?.name ?? "Участники группы"} description={chat ? `VK-беседа: ${chat.title ?? `Беседа ${chat.id}`}` : "К группе не подключена VK-беседа."} />
+      {groupsError || chatsError || membersError ? <QueryErrorState message="Не удалось загрузить группу и её участников." onRetry={() => Promise.all([refetchGroups(), refetchChats(), refetchMembers()])} /> : null}
       <Button component={Link} startIcon={<ArrowBackIcon />} sx={{ alignSelf: "flex-start" }} to="/study_groups">К группам</Button>
       <SectionCard title="Участники" description="Роль определяет, кто попадёт в снимок получателей рассылки.">
         <TextField aria-label="Поиск участников" onChange={(event) => setSearch(event.target.value)} placeholder="Поиск по имени" size="small" slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> } }} sx={{ mb: 2, maxWidth: 420 }} value={search} />

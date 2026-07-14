@@ -30,6 +30,7 @@ import { Link } from "react-router-dom";
 
 import { EmptyState } from "../../components/EmptyState";
 import { PageHeader } from "../../components/PageHeader";
+import { QueryErrorState } from "../../components/QueryErrorState";
 import { BroadcastStatusChip } from "../../components/StatusChip";
 import type { Broadcast } from "../../types/entities";
 import { isBroadcastCompleted, sortBroadcasts, type BroadcastSort } from "../../utils/broadcasts";
@@ -38,7 +39,7 @@ import { formatDateTime } from "../../utils/date";
 type StatusFilter = "all" | "active" | "completed";
 
 export function BroadcastListPage() {
-  const { data = [], isPending } = useGetList<Broadcast>("broadcasts");
+  const { data = [], isPending, error, refetch } = useGetList<Broadcast>("broadcasts");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [sort, setSort] = useState<BroadcastSort>("created_desc");
@@ -65,6 +66,7 @@ export function BroadcastListPage() {
         description="Создание, контроль ответов и экспорт результатов."
         action={{ label: "Создать рассылку", to: "/broadcasts/create", icon: <AddIcon /> }}
       />
+      {error ? <QueryErrorState message="Не удалось загрузить рассылки." onRetry={refetch} /> : null}
       <Paper variant="outlined">
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ p: 2 }}>
           <TextField

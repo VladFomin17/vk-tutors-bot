@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { isBroadcastCompleted, sortBroadcasts } from "../src/utils/broadcasts.ts";
+import { isBroadcastCompleted, isBroadcastDraftDirty, sortBroadcasts } from "../src/utils/broadcasts.ts";
 import type { Broadcast } from "../src/types/entities.ts";
 
 const base: Broadcast = {
@@ -25,4 +25,12 @@ test("broadcast sorting does not mutate API data", () => {
   const broadcasts = [base, { ...base, id: 2, title: "Альфа", deadline: "2026-07-15T10:00:00Z" }];
   assert.deepEqual(sortBroadcasts(broadcasts, "deadline_asc").map((item) => item.id), [2, 1]);
   assert.deepEqual(broadcasts.map((item) => item.id), [1, 2]);
+});
+
+test("broadcast draft becomes dirty only after a meaningful change", () => {
+  const initialDeadline = "2026-07-20T10:00";
+  const draft = { title: "", message: "", link: "", deadline: initialDeadline, confirmationType: "any_message", selectedGroupCount: 0 };
+  assert.equal(isBroadcastDraftDirty(draft, initialDeadline), false);
+  assert.equal(isBroadcastDraftDirty({ ...draft, message: "Ответьте на опрос" }, initialDeadline), true);
+  assert.equal(isBroadcastDraftDirty({ ...draft, selectedGroupCount: 1 }, initialDeadline), true);
 });

@@ -27,13 +27,14 @@ import { Link } from "react-router-dom";
 
 import { EmptyState } from "../../components/EmptyState";
 import { PageHeader } from "../../components/PageHeader";
+import { QueryErrorState } from "../../components/QueryErrorState";
 import { SectionCard } from "../../components/SectionCard";
 import type { StudyGroup, VkChat } from "../../types/entities";
 
 export function GroupListPage() {
   const notify = useNotify();
-  const { data: groups = [], isPending: groupsPending } = useGetList<StudyGroup>("study_groups");
-  const { data: chats = [], isPending: chatsPending } = useGetList<VkChat>("vk_chats");
+  const { data: groups = [], isPending: groupsPending, error: groupsError, refetch: refetchGroups } = useGetList<StudyGroup>("study_groups");
+  const { data: chats = [], isPending: chatsPending, error: chatsError, refetch: refetchChats } = useGetList<VkChat>("vk_chats");
   const [createGroup, { isPending: isCreating }] = useCreate();
   const [updateChat] = useUpdate();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -64,6 +65,7 @@ export function GroupListPage() {
     <Stack spacing={3}>
       <Title title="Учебные группы" />
       <PageHeader title="Учебные группы" description="Подключение VK-бесед и классификация участников." />
+      {groupsError || chatsError ? <QueryErrorState message="Не удалось загрузить группы и VK-беседы." onRetry={() => Promise.all([refetchGroups(), refetchChats()])} /> : null}
       <SectionCard title="Группы" action={<Button onClick={() => setDialogOpen(true)} startIcon={<AddIcon />} variant="outlined">Создать</Button>}>
         {groupsPending ? <LinearProgress /> : null}
         {!groupsPending && groups.length === 0 ? <EmptyState title="Групп пока нет" description="Создайте учебную группу и привяжите к ней VK-беседу." /> : (

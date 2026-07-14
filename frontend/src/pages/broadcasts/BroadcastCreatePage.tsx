@@ -8,6 +8,11 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   FormControl,
   FormControlLabel,
   FormLabel,
@@ -18,29 +23,45 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useState, type FormEvent } from "react";
-import { Title, useCreate, useGetList, useNotify } from "react-admin";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Title, useBlocker, useCreate, useGetList, useNotify } from "react-admin";
 import { Link, useNavigate } from "react-router-dom";
 
 import { PageHeader } from "../../components/PageHeader";
+import { QueryErrorState } from "../../components/QueryErrorState";
 import { SectionCard } from "../../components/SectionCard";
 import type { ConfirmationType, StudyGroup, VkChat } from "../../types/entities";
+import { isBroadcastDraftDirty } from "../../utils/broadcasts";
 import { tomorrowLocalDateTime } from "../../utils/date";
 
 export function BroadcastCreatePage() {
   const notify = useNotify();
   const navigate = useNavigate();
-  const { data: groups = [], isPending: groupsPending } = useGetList<StudyGroup>("study_groups");
-  const { data: chats = [] } = useGetList<VkChat>("vk_chats");
+  const { data: groups = [], isPending: groupsPending, error: groupsError, refetch: refetchGroups } = useGetList<StudyGroup>("study_groups");
+  const { data: chats = [], error: chatsError, refetch: refetchChats } = useGetList<VkChat>("vk_chats");
   const [createBroadcast, { isPending }] = useCreate();
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [link, setLink] = useState("");
-  const [deadline, setDeadline] = useState(tomorrowLocalDateTime);
+  const [initialDeadline] = useState(tomorrowLocalDateTime);
+  const [deadline, setDeadline] = useState(initialDeadline);
   const [confirmationType, setConfirmationType] = useState<ConfirmationType>("any_message");
   const [selectedGroups, setSelectedGroups] = useState<StudyGroup[]>([]);
+  const submittedRef = useRef(false);
+  const isDirty = isBroadcastDraftDirty({ title, message, link, deadline, confirmationType, selectedGroupCount: selectedGroups.length }, initialDeadline);
+  const blocker = useBlocker(isDirty && !submittedRef.current);
   const linkedGroupIds = new Set(chats.flatMap((chat) => chat.study_group_id ?? []));
   const availableGroups = groups.filter((group) => group.is_active && linkedGroupIds.has(group.id));
+
+  useEffect(() => {
+    function warnBeforeUnload(event: BeforeUnloadEvent) {
+      if (!isDirty || submittedRef.current) return;
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [isDirty]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,6 +83,7 @@ export function BroadcastCreatePage() {
       },
       {
         onSuccess: (broadcast) => {
+          submittedRef.current = true;
           notify("Рассылка создана и поставлена в очередь", { type: "success" });
           navigate(`/broadcasts/${broadcast.id}/show`);
         },
@@ -74,6 +96,7 @@ export function BroadcastCreatePage() {
     <Stack spacing={3}>
       <Title title="Создать рассылку" />
       <PageHeader title="Создать рассылку" description="Заполните сообщение, выберите группы и проверьте предпросмотр." />
+      {groupsError || chatsError ? <QueryErrorState message="Не удалось загрузить учебные группы и беседы." onRetry={() => Promise.all([refetchGroups(), refetchChats()])} /> : null}
       <Box component="form" onSubmit={submit}>
         <Grid container spacing={3} sx={{ alignItems: "flex-start" }}>
           <Grid size={{ xs: 12, lg: 8 }}>
@@ -156,6 +179,14 @@ export function BroadcastCreatePage() {
           </Grid>
         </Grid>
       </Box>
+      <Dialog onClose={() => blocker.reset?.()} open={blocker.state === "blocked"}>
+        <DialogTitle>Закрыть форму?</DialogTitle>
+        <DialogContent><DialogContentText>Введённые данные не сохранятся. Рассылка ещё не создана.</DialogContentText></DialogContent>
+        <DialogActions>
+          <Button onClick={() => blocker.reset?.()}>Остаться</Button>
+          <Button color="error" onClick={() => blocker.proceed?.()}>Закрыть без сохранения</Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

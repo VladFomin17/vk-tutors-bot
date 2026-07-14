@@ -32,6 +32,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { EmptyState } from "../../components/EmptyState";
 import { PageHeader } from "../../components/PageHeader";
+import { QueryErrorState } from "../../components/QueryErrorState";
 import { SectionCard } from "../../components/SectionCard";
 import { BroadcastStatusChip } from "../../components/StatusChip";
 import type { Broadcast, BroadcastResult } from "../../types/entities";
@@ -42,8 +43,8 @@ type ResultFilter = "all" | "responded" | "unanswered";
 export function BroadcastShowPage() {
   const { id } = useParams();
   const broadcastId = Number(id);
-  const { data: broadcasts = [] } = useGetList<Broadcast>("broadcasts");
-  const { data: results = [], isPending } = useGetList<BroadcastResult>("broadcast_results", { filter: { broadcast_id: broadcastId } }, { enabled: Number.isFinite(broadcastId) });
+  const { data: broadcasts = [], error: broadcastsError, refetch: refetchBroadcasts } = useGetList<Broadcast>("broadcasts");
+  const { data: results = [], isPending, error: resultsError, refetch: refetchResults } = useGetList<BroadcastResult>("broadcast_results", { filter: { broadcast_id: broadcastId } }, { enabled: Number.isFinite(broadcastId) });
   const broadcast = broadcasts.find((item) => item.id === broadcastId);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<ResultFilter>("all");
@@ -66,6 +67,7 @@ export function BroadcastShowPage() {
     <Stack spacing={3}>
       <Title title={broadcast?.title ?? "Результаты рассылки"} />
       <PageHeader title={broadcast?.title ?? "Результаты рассылки"} description={broadcast ? `Дедлайн: ${formatDateTime(broadcast.deadline)}` : "Загрузка данных рассылки…"} />
+      {broadcastsError || resultsError ? <QueryErrorState message="Не удалось загрузить результаты рассылки." onRetry={() => Promise.all([refetchBroadcasts(), refetchResults()])} /> : null}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
         <Button component={Link} startIcon={<ArrowBackIcon />} to="/broadcasts">К рассылкам</Button>
         <Button component="a" href={`/api/v1/broadcasts/${broadcastId}/export.xlsx`} startIcon={<DownloadOutlinedIcon />} variant="outlined">XLSX</Button>

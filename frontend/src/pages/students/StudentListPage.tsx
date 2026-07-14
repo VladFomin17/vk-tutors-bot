@@ -23,13 +23,14 @@ import { Title, useGetList } from "react-admin";
 
 import { EmptyState } from "../../components/EmptyState";
 import { PageHeader } from "../../components/PageHeader";
+import { QueryErrorState } from "../../components/QueryErrorState";
 import type { Student } from "../../types/entities";
 import { formatDateTime } from "../../utils/date";
 
 type ActivityFilter = "all" | "active" | "inactive";
 
 export function StudentListPage() {
-  const { data = [], isPending } = useGetList<Student>("students");
+  const { data = [], isPending, error, refetch } = useGetList<Student>("students");
   const [search, setSearch] = useState("");
   const [groupId, setGroupId] = useState("all");
   const [activity, setActivity] = useState<ActivityFilter>("active");
@@ -57,6 +58,7 @@ export function StudentListPage() {
     <Stack spacing={3}>
       <Title title="Студенты" />
       <PageHeader title="Студенты" description="Первокурсники, классифицированные в подключённых VK-беседах." />
+      {error ? <QueryErrorState message="Не удалось загрузить студентов." onRetry={refetch} /> : null}
       <Paper variant="outlined">
         <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} sx={{ p: 2 }}>
           <TextField
