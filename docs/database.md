@@ -7,6 +7,12 @@ erDiagram
     STUDY_GROUP ||--o| VK_CHAT : "назначена"
     VK_CHAT ||--o{ CHAT_MEMBER : "содержит"
     VK_USER ||--o{ CHAT_MEMBER : "состоит"
+    BROADCAST ||--|{ BROADCAST_TARGET : "адресована"
+    STUDY_GROUP ||--o{ BROADCAST_TARGET : "выбрана"
+    VK_CHAT ||--o{ BROADCAST_TARGET : "получает"
+    BROADCAST_TARGET ||--|{ BROADCAST_RECIPIENT : "фиксирует"
+    VK_USER ||--o{ BROADCAST_RECIPIENT : "получатель"
+    BROADCAST_TARGET ||--|{ OUTBOUND_MESSAGE : "порождает"
 
     STUDY_GROUP {
         bigint id PK
@@ -33,8 +39,37 @@ erDiagram
         timestamptz first_seen_at
         timestamptz last_seen_at
     }
+    BROADCAST {
+        bigint id PK
+        varchar title
+        text message_text
+        varchar link
+        timestamptz deadline
+        varchar confirmation_type
+    }
+    BROADCAST_TARGET {
+        bigint id PK
+        bigint broadcast_id FK
+        bigint study_group_id FK
+        bigint chat_id FK
+    }
+    BROADCAST_RECIPIENT {
+        bigint target_id PK,FK
+        bigint vk_user_id PK,FK
+    }
+    OUTBOUND_MESSAGE {
+        bigint id PK
+        bigint target_id FK
+        varchar kind
+        varchar status
+        timestamptz scheduled_at
+        integer random_id
+        varchar broadcast_token UK
+    }
 ```
 
 - `vk_chats` создаётся при обнаружении события VK и позднее связывается с одной учебной группой.
 - Составной ключ `chat_members` не допускает повторного членства пользователя в одной беседе.
 - `role`: `unknown`, `student`, `tutor` или `leader`. Новые участники получают `unknown` до классификации.
+- `broadcast_recipients` хранит неизменяемый снимок активных первокурсников на момент создания рассылки.
+- `outbound_messages` является PostgreSQL outbox: начальная отправка планируется сразу, напоминание — за 24 часа до дедлайна, если этот момент ещё не прошёл.

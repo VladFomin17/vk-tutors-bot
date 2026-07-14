@@ -1,0 +1,83 @@
+import logging
+from datetime import datetime
+from typing import Literal
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field, HttpUrl, field_validator
+
+from app.services import broadcasts
+from app.services.auth import require_admin
+
+logger = logging.getLogger(__name__)
+router = APIRouter(tags=["broadcasts"], dependencies=[Depends(require_admin)])
+
+
+class BroadcastCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=128)
+    message_text: str = Field(min_length=1, max_length=10000)
+    link: HttpUrl | None = None
+    deadline: datetime
+    confirmation_type: Literal["any_message", "image"]
+    study_group_ids: list[int] = Field(min_length=1)
+
+    @field_validator("title", "message_text")
+    @classmethod
+    def normalize_text(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Value must not be blank")
+        return normalized
+
+    @field_validator("deadline")
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.utcoffset() is None:
+            raise ValueError("Deadline must include a timezone")
+        return value
+
+    @field_validator("study_group_ids")
+    @classmethod
+    def require_unique_group_ids(cls, value: list[int]) -> list[int]:
+        if any(group_id <= 0 for group_id in value):
+            raise ValueError("Study group IDs must be positive")
+        if len(value) != len(set(value)):
+            raise ValueError("Study group IDs must be unique")
+        return value
+
+
+class BroadcastResponse(BaseModel):
+    id: int
+    title: str
+    message_text: str
+    link: str | None
+    deadline: datetime
+    confirmation_type: Literal["any_message", "image"]
+    created_at: datetime
+    target_count: int
+    recipient_count: int
+
+
+@router.get("/broadcasts", response_model=list[BroadcastResponse])
+async def get_broadcasts() -> list[dict[str, object]]:
+    return await broadcasts.list_broadcasts()
+
+
+@router.post(
+    "/broadcasts",
+    response_model=BroadcastResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def post_broadcast(payload: BroadcastCreate) -> dict[str, object]:
+    try:
+        broadcast = await broadcasts.create_broadcast(
+            title=payload.title,
+            message_text=payload.message_text,
+            link=str(payload.link) if payload.link else None,
+            deadline=payload.deadline,
+            confirmation_type=payload.confirmation_type,
+            study_group_ids=payload.study_group_ids,
+        )
+    except broadcasts.BroadcastConflictError as error:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
+    logger.info("Broadcast %s created", broadcast["id"])
+    return broadcast

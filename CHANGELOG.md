@@ -11,6 +11,7 @@
 - VK Long Poll listener with idempotent chat and member synchronization.
 - Single-administrator authentication with revocable database sessions.
 - Protected study group, VK chat linking and member role management.
+- Broadcast creation, recipient snapshots and transactional PostgreSQL outbox jobs.
 
 ### Fixed
 

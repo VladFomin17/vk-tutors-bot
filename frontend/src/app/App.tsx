@@ -12,6 +12,7 @@ export function App() {
       dataProvider={dataProvider}
       disableTelemetry
     >
+      <Resource name="broadcasts" />
       <Resource name="study_groups" />
       <Resource name="vk_chats" />
     </Admin>

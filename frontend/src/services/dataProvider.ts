@@ -22,6 +22,8 @@ export const dataProvider: DataProvider = {
     let path: string;
     if (resource === "study_groups") {
       path = "/study-groups";
+    } else if (resource === "broadcasts") {
+      path = "/broadcasts";
     } else if (resource === "vk_chats") {
       path = "/vk-chats";
     } else if (resource === "chat_members" && params.filter.chat_id) {
@@ -33,10 +35,10 @@ export const dataProvider: DataProvider = {
     return { data, total: data.length };
   },
   create: async (resource, params) => {
-    if (resource !== "study_groups") {
+    if (resource !== "study_groups" && resource !== "broadcasts") {
       return unsupported();
     }
-    const data = await api("/study-groups", {
+    const data = await api(resource === "study_groups" ? "/study-groups" : "/broadcasts", {
       method: "POST",
       body: JSON.stringify(params.data),
     });

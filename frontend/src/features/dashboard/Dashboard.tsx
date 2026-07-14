@@ -1,6 +1,8 @@
 import { type FormEvent, useState } from "react";
 import { useCreate, useGetList, useNotify, useUpdate } from "react-admin";
 
+import { BroadcastsPanel } from "../broadcasts/BroadcastsPanel";
+
 type StudyGroup = { id: number; name: string; is_active: boolean };
 type VkChat = {
   id: number;
@@ -168,6 +170,11 @@ export function Dashboard() {
           </table>
         </section>
       ) : null}
+
+      <BroadcastsPanel
+        groups={groups}
+        linkedGroupIds={new Set(chats.flatMap((chat) => chat.study_group_id ?? []))}
+      />
     </main>
   );
 }
