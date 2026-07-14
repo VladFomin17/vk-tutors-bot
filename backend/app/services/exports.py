@@ -4,7 +4,6 @@ from io import BytesIO
 from zoneinfo import ZoneInfo
 
 from docx import Document
-from docx.enum.section import WD_ORIENT
 from docx.shared import Cm, Pt
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -40,36 +39,25 @@ def create_xlsx(title: str, results: Sequence[Mapping[str, object]]) -> bytes:
     return output.getvalue()
 
 
-def create_docx(title: str, results: Sequence[Mapping[str, object]]) -> bytes:
+def create_docx(results: Sequence[Mapping[str, object]]) -> bytes:
     document = Document()
     section = document.sections[0]
-    section.orientation = WD_ORIENT.LANDSCAPE
-    section.page_width, section.page_height = Cm(29.7), Cm(21)
+    section.page_width, section.page_height = Cm(21), Cm(29.7)
     section.top_margin = section.bottom_margin = Cm(1.5)
     section.left_margin = section.right_margin = Cm(1.5)
     style = document.styles["Normal"]
     style.font.name = "Arial"
     style.font.size = Pt(9)
 
-    document.add_heading(f"Результаты рассылки «{title}»", level=1)
-    answered = sum(bool(result["responded"]) for result in results)
-    document.add_paragraph(f"Ответили: {answered} из {len(results)}")
-    table = document.add_table(rows=1, cols=len(HEADERS))
-    table.style = "Table Grid"
-    table.autofit = False
-    widths = tuple(map(Cm, (2.8, 2.2, 4.2, 3.5, 5, 3.2, 5.8)))
-    for cell, value in zip(table.rows[0].cells, HEADERS, strict=True):
-        cell.text = value
-        for run in cell.paragraphs[0].runs:
-            run.bold = True
-    for cell, width in zip(table.rows[0].cells, widths, strict=True):
-        cell.width = width
+    groups: dict[str, list[Mapping[str, object]]] = {}
     for result in results:
-        cells = table.add_row().cells
-        for cell, value in zip(cells, _row(result), strict=True):
-            cell.text = str(value)
-        for cell, width in zip(cells, widths, strict=True):
-            cell.width = width
+        groups.setdefault(str(result["study_group_name"]), []).append(result)
+    for group_name, members in groups.items():
+        heading = document.add_paragraph()
+        heading.add_run(group_name).bold = True
+        surnames = [str(member["last_name"]) for member in members if member["responded"]]
+        for surname in surnames or ["-"]:
+            document.add_paragraph(surname)
 
     output = BytesIO()
     document.save(output)

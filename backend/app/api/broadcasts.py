@@ -103,7 +103,7 @@ async def export_broadcast_results(
     content = (
         exports.create_xlsx(title, results)
         if file_type == "xlsx"
-        else exports.create_docx(title, results)
+        else exports.create_docx(results)
     )
     media_type = (
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
