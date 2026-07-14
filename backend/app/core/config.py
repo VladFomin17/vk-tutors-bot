@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     vk_long_poll_wait_seconds: int = Field(default=25, ge=1, le=90)
     vk_request_timeout_seconds: int = Field(default=10, ge=1, le=60)
     vk_max_retries: int = Field(default=5, ge=1, le=10)
+    outbox_poll_seconds: int = Field(default=10, ge=1, le=60)
+    outbox_batch_size: int = Field(default=20, ge=1, le=100)
+    outbox_max_attempts: int = Field(default=5, ge=1, le=20)
 
     model_config = SettingsConfigDict(
         env_file=("../.env", ".env"),

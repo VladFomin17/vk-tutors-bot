@@ -6,6 +6,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from app.core.config import Settings
+
 
 class VkApiError(RuntimeError):
     pass
@@ -161,6 +163,28 @@ class VkClient:
             members[member_id] = (member_id, first_name, last_name)
         return list(members.values())
 
+    async def send_message(
+        self,
+        *,
+        peer_id: int,
+        random_id: int,
+        message: str,
+        broadcast_token: str,
+    ) -> int:
+        response = await self.api(
+            "messages.send",
+            peer_id=peer_id,
+            random_id=random_id,
+            message=message,
+            payload=json.dumps(
+                {"broadcast_token": broadcast_token},
+                separators=(",", ":"),
+            ),
+        )
+        if not isinstance(response, int):
+            raise VkApiError("VK send response is invalid")
+        return response
+
     async def get_long_poll_endpoint(self) -> LongPollEndpoint:
         response = await self.api("groups.getLongPollServer", group_id=self.group_id)
         if not isinstance(response, dict):
@@ -198,3 +222,15 @@ class VkClient:
         if not isinstance(ts, str) or not isinstance(updates, list):
             raise VkApiError("VK Long Poll update is invalid")
         return ts, [update for update in updates if isinstance(update, dict)]
+
+
+def build_client(settings: Settings) -> VkClient:
+    if settings.vk_group_id is None or settings.vk_access_token is None:
+        raise RuntimeError("VK_GROUP_ID and VK_ACCESS_TOKEN must be configured")
+    return VkClient(
+        group_id=settings.vk_group_id,
+        access_token=settings.vk_access_token.get_secret_value(),
+        api_version=settings.vk_api_version,
+        request_timeout=settings.vk_request_timeout_seconds,
+        long_poll_wait=settings.vk_long_poll_wait_seconds,
+    )

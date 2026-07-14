@@ -4,10 +4,16 @@ from typing import Any
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.core.config import Settings, get_settings
+from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.db.session import engine
-from app.integrations.vk.client import ChatReference, LongPollEndpoint, VkApiError, VkClient
+from app.integrations.vk.client import (
+    ChatReference,
+    LongPollEndpoint,
+    VkApiError,
+    VkClient,
+    build_client,
+)
 from app.services.chat_directory import list_chats_missing_titles, needs_sync, sync_chat
 
 logger = logging.getLogger(__name__)
@@ -66,18 +72,6 @@ async def retry_update(
                 # ponytail: the next message retries discovery; persist raw events if lossless intake is required.
                 return
             await asyncio.sleep(min(2**attempt, 30))
-
-
-def build_client(settings: Settings) -> VkClient:
-    if settings.vk_group_id is None or settings.vk_access_token is None:
-        raise RuntimeError("VK_GROUP_ID and VK_ACCESS_TOKEN must be configured")
-    return VkClient(
-        group_id=settings.vk_group_id,
-        access_token=settings.vk_access_token.get_secret_value(),
-        api_version=settings.vk_api_version,
-        request_timeout=settings.vk_request_timeout_seconds,
-        long_poll_wait=settings.vk_long_poll_wait_seconds,
-    )
 
 
 async def run() -> None:
