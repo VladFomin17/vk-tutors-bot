@@ -20,7 +20,7 @@
 
 - Fixed broadcast results failing to load when the recipient snapshot was not empty.
 - Simplified DOCX exports to group headings and respondent surnames.
-
+- Allow students to replace an earlier confirmation with a newer valid reply.
 - Empty React Admin screen caused by missing resource registration.
 - VK chat titles are restored for chats discovered through Long Poll.
 - Broadcasts can be created for test chats without classified students.

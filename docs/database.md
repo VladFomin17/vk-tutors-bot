@@ -89,4 +89,4 @@ erDiagram
 - `role`: `unknown`, `student`, `tutor` или `leader`. Новые участники получают `unknown` до классификации.
 - `broadcast_recipients` хранит неизменяемый снимок активных первокурсников на момент создания рассылки.
 - `outbound_messages` является PostgreSQL outbox: начальная отправка планируется сразу, напоминание — за 24 часа до дедлайна, если этот момент ещё не прошёл.
-- `broadcast_responses` хранит первую подходящую reply-попытку каждого получателя; уникальный `(peer_id, conversation_message_id)` делает обработку Long Poll идемпотентной.
+- `broadcast_responses` хранит последнюю подходящую reply-попытку каждого получателя; уникальный `(peer_id, conversation_message_id)` и монотонный `conversation_message_id` делают обработку Long Poll идемпотентной.

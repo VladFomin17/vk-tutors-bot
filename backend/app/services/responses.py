@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import and_, select
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.dialects.postgresql import Insert, insert
 from sqlalchemy.sql import Select
 
 from app.db.session import session_factory
@@ -73,8 +73,7 @@ async def record_confirmation(
             return "wrong_type"
 
         response_id = await session.scalar(
-            insert(BroadcastResponse)
-            .values(
+            _response_upsert(
                 target_id=destination["target_id"],
                 outbound_message_id=destination["outbound_message_id"],
                 vk_user_id=vk_user_id,
@@ -86,10 +85,30 @@ async def record_confirmation(
                 responded_at=responded_at,
                 is_late=responded_at > destination["deadline"],
             )
-            .on_conflict_do_nothing()
             .returning(BroadcastResponse.id)
         )
         return "accepted" if response_id is not None else "duplicate"
+
+
+def _response_upsert(**values: object) -> Insert:
+    statement = insert(BroadcastResponse).values(**values)
+    return statement.on_conflict_do_update(
+        constraint="uq_broadcast_responses_recipient",
+        set_={
+            "outbound_message_id": statement.excluded.outbound_message_id,
+            "peer_id": statement.excluded.peer_id,
+            "vk_message_id": statement.excluded.vk_message_id,
+            "conversation_message_id": statement.excluded.conversation_message_id,
+            "text": statement.excluded.text,
+            "attachments": statement.excluded.attachments,
+            "responded_at": statement.excluded.responded_at,
+            "is_late": statement.excluded.is_late,
+        },
+        where=(
+            statement.excluded.conversation_message_id
+            > BroadcastResponse.conversation_message_id
+        ),
+    )
 
 
 async def list_results(broadcast_id: int) -> list[dict[str, object]]:
