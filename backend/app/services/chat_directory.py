@@ -1,8 +1,131 @@
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import IntegrityError
 
 from app.db.session import session_factory
-from app.models import ChatMember, VkChat, VkUser
+from app.models import ChatMember, StudyGroup, VkChat, VkUser
+
+
+class DirectoryNotFoundError(RuntimeError):
+    pass
+
+
+class DirectoryConflictError(RuntimeError):
+    pass
+
+
+async def list_study_groups() -> list[dict[str, object]]:
+    async with session_factory() as session:
+        rows = await session.execute(
+            select(StudyGroup.id, StudyGroup.name, StudyGroup.is_active).order_by(StudyGroup.name)
+        )
+        return [dict(row) for row in rows.mappings()]
+
+
+async def create_study_group(name: str) -> dict[str, object]:
+    async with session_factory.begin() as session:
+        row = (
+            await session.execute(
+                insert(StudyGroup)
+                .values(name=name)
+                .on_conflict_do_nothing(index_elements=[StudyGroup.name])
+                .returning(StudyGroup.id, StudyGroup.name, StudyGroup.is_active)
+            )
+        ).mappings().one_or_none()
+        if row is None:
+            raise DirectoryConflictError("Study group already exists")
+        return dict(row)
+
+
+async def list_chats() -> list[dict[str, object]]:
+    async with session_factory() as session:
+        rows = await session.execute(
+            select(
+                VkChat.id,
+                VkChat.peer_id,
+                VkChat.title,
+                VkChat.study_group_id,
+                VkChat.is_active,
+            ).order_by(VkChat.id)
+        )
+        return [dict(row) for row in rows.mappings()]
+
+
+async def link_chat(chat_id: int, study_group_id: int | None) -> dict[str, object]:
+    try:
+        async with session_factory.begin() as session:
+            if study_group_id is not None:
+                group_exists = await session.scalar(
+                    select(StudyGroup.id).where(StudyGroup.id == study_group_id)
+                )
+                if group_exists is None:
+                    raise DirectoryNotFoundError("Study group not found")
+            row = (
+                await session.execute(
+                    update(VkChat)
+                    .where(VkChat.id == chat_id)
+                    .values(study_group_id=study_group_id)
+                    .returning(
+                        VkChat.id,
+                        VkChat.peer_id,
+                        VkChat.title,
+                        VkChat.study_group_id,
+                        VkChat.is_active,
+                    )
+                )
+            ).mappings().one_or_none()
+            if row is None:
+                raise DirectoryNotFoundError("VK chat not found")
+            return dict(row)
+    except IntegrityError as error:
+        raise DirectoryConflictError("Study group is already linked") from error
+
+
+async def list_members(chat_id: int) -> list[dict[str, object]]:
+    async with session_factory() as session:
+        chat_exists = await session.scalar(select(VkChat.id).where(VkChat.id == chat_id))
+        if chat_exists is None:
+            raise DirectoryNotFoundError("VK chat not found")
+        rows = await session.execute(
+            select(
+                ChatMember.chat_id,
+                ChatMember.vk_user_id,
+                VkUser.first_name,
+                VkUser.last_name,
+                ChatMember.role,
+                ChatMember.is_active,
+            )
+            .join(VkUser, VkUser.vk_user_id == ChatMember.vk_user_id)
+            .where(ChatMember.chat_id == chat_id)
+            .order_by(VkUser.last_name, VkUser.first_name)
+        )
+        return [
+            {**dict(row), "id": f"{row['chat_id']}:{row['vk_user_id']}"}
+            for row in rows.mappings()
+        ]
+
+
+async def update_member_role(chat_id: int, vk_user_id: int, role: str) -> dict[str, object]:
+    async with session_factory.begin() as session:
+        row = (
+            await session.execute(
+                update(ChatMember)
+                .where(
+                    ChatMember.chat_id == chat_id,
+                    ChatMember.vk_user_id == vk_user_id,
+                )
+                .values(role=role)
+                .returning(
+                    ChatMember.chat_id,
+                    ChatMember.vk_user_id,
+                    ChatMember.role,
+                    ChatMember.is_active,
+                )
+            )
+        ).mappings().one_or_none()
+        if row is None:
+            raise DirectoryNotFoundError("Chat member not found")
+        return {**dict(row), "id": f"{row['chat_id']}:{row['vk_user_id']}"}
 
 
 async def needs_sync(peer_id: int, vk_user_id: int) -> bool:
