@@ -2,6 +2,8 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutlined";
 import CampaignOutlinedIcon from "@mui/icons-material/CampaignOutlined";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
+import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
+import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import { Box, Button } from "@mui/material";
 import {
   AppBar,
@@ -43,6 +45,8 @@ function AdminMenu() {
         to="/broadcasts/create"
       />
       <Menu.ResourceItem name="study_groups" />
+      <Menu.ResourceItem name="students" />
+      <Menu.ResourceItem name="statistics" />
     </Menu>
   );
 }
@@ -53,3 +57,5 @@ export function AdminLayout(props: LayoutProps) {
 
 export const broadcastIcon = CampaignOutlinedIcon;
 export const groupIcon = GroupsOutlinedIcon;
+export const studentIcon = PeopleOutlinedIcon;
+export const statisticsIcon = BarChartOutlinedIcon;

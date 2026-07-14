@@ -30,6 +30,8 @@ export const dataProvider: DataProvider = {
       path = "/vk-chats";
     } else if (resource === "chat_members" && params.filter.chat_id) {
       path = `/vk-chats/${params.filter.chat_id}/members`;
+    } else if (resource === "students") {
+      path = "/students";
     } else {
       return unsupported();
     }
@@ -61,7 +63,13 @@ export const dataProvider: DataProvider = {
     const data = await api(path, { method: "PATCH", body: JSON.stringify(body) });
     return { data: { ...params.data, ...data } };
   },
-  getOne: async () => unsupported(),
+  getOne: async (resource, params) => {
+    if (resource !== "statistics") {
+      return unsupported();
+    }
+    const data = await api("/statistics");
+    return { data: { id: params.id, ...data } };
+  },
   getMany: async () => unsupported(),
   getManyReference: async () => unsupported(),
   updateMany: async () => unsupported(),

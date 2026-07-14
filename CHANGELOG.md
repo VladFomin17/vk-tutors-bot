@@ -8,6 +8,8 @@
 - Search, filters, sorting, pagination, loading and empty states in the admin panel.
 - Broadcast preview and in-app response image dialog.
 - Localized administrator login and dependency-free frontend logic checks.
+- Global student directory with group and activity filters.
+- Authenticated aggregate statistics API and lazy-loaded MUI charts.
 - Initial FastAPI, Alembic, PostgreSQL and React Admin scaffold.
 - Docker Compose development runtime.
 - VK API feasibility spike and architecture documentation.

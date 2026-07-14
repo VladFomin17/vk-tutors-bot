@@ -2,7 +2,7 @@ import { LinearProgress } from "@mui/material";
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from "react";
 import { Admin, Resource } from "react-admin";
 
-import { AdminLayout, broadcastIcon, groupIcon } from "../layouts/AdminLayout";
+import { AdminLayout, broadcastIcon, groupIcon, statisticsIcon, studentIcon } from "../layouts/AdminLayout";
 import { LoginPage } from "../pages/auth/LoginPage";
 import { authProvider } from "../services/authProvider";
 import { dataProvider } from "../services/dataProvider";
@@ -14,6 +14,8 @@ const BroadcastCreatePage = withSuspense(lazy(() => import("../pages/broadcasts/
 const BroadcastShowPage = withSuspense(lazy(() => import("../pages/broadcasts/BroadcastShowPage").then((module) => ({ default: module.BroadcastShowPage }))));
 const GroupListPage = withSuspense(lazy(() => import("../pages/groups/GroupListPage").then((module) => ({ default: module.GroupListPage }))));
 const GroupShowPage = withSuspense(lazy(() => import("../pages/groups/GroupShowPage").then((module) => ({ default: module.GroupShowPage }))));
+const StudentListPage = withSuspense(lazy(() => import("../pages/students/StudentListPage").then((module) => ({ default: module.StudentListPage }))));
+const StatisticsPage = withSuspense(lazy(() => import("../pages/statistics/StatisticsPage").then((module) => ({ default: module.StatisticsPage }))));
 
 export function App() {
   return (
@@ -29,6 +31,8 @@ export function App() {
     >
       <Resource create={BroadcastCreatePage} icon={broadcastIcon} list={BroadcastListPage} name="broadcasts" options={{ label: "Рассылки" }} show={BroadcastShowPage} />
       <Resource icon={groupIcon} list={GroupListPage} name="study_groups" options={{ label: "Учебные группы" }} show={GroupShowPage} />
+      <Resource icon={studentIcon} list={StudentListPage} name="students" options={{ label: "Студенты" }} />
+      <Resource icon={statisticsIcon} list={StatisticsPage} name="statistics" options={{ label: "Статистика" }} />
       <Resource name="vk_chats" />
       <Resource name="chat_members" />
       <Resource name="broadcast_results" />

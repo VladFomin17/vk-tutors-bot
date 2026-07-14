@@ -1,7 +1,8 @@
 import CampaignOutlinedIcon from "@mui/icons-material/CampaignOutlined";
-import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutlined";
 import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
+import HowToRegOutlinedIcon from "@mui/icons-material/HowToRegOutlined";
+import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import {
   Alert,
   Button,
@@ -19,7 +20,7 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { Title, useGetList } from "react-admin";
+import { Title, useGetList, useGetOne } from "react-admin";
 import { Link } from "react-router-dom";
 
 import { EmptyState } from "../../components/EmptyState";
@@ -27,16 +28,15 @@ import { PageHeader } from "../../components/PageHeader";
 import { SectionCard } from "../../components/SectionCard";
 import { StatCard } from "../../components/StatCard";
 import { BroadcastStatusChip } from "../../components/StatusChip";
-import type { Broadcast, StudyGroup, VkChat } from "../../types/entities";
+import type { Broadcast, Statistics, VkChat } from "../../types/entities";
 import { formatDateTime } from "../../utils/date";
 
 export function OverviewPage() {
-  const { data: groups = [], isPending: groupsPending } = useGetList<StudyGroup>("study_groups");
-  const { data: chats = [], isPending: chatsPending } = useGetList<VkChat>("vk_chats");
+  const { data: chats = [] } = useGetList<VkChat>("vk_chats");
   const { data: broadcasts = [], isPending: broadcastsPending } = useGetList<Broadcast>("broadcasts");
+  const { data: statistics, isPending: statisticsPending } = useGetOne<Statistics>("statistics", { id: "current" });
   const now = Date.now();
   const active = broadcasts.filter((broadcast) => new Date(broadcast.deadline).getTime() >= now);
-  const completed = broadcasts.length - active.length;
   const recent = [...broadcasts].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()).slice(0, 5);
   const upcoming = [...active].sort((left, right) => new Date(left.deadline).getTime() - new Date(right.deadline).getTime()).slice(0, 5);
   const unlinkedChats = chats.filter((chat) => chat.study_group_id === null);
@@ -46,10 +46,11 @@ export function OverviewPage() {
       <Title title="Обзор" />
       <PageHeader title="Обзор" description="Состояние рассылок и подключённых учебных групп." action={{ label: "Создать рассылку", to: "/broadcasts/create" }} />
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><StatCard icon={<GroupsOutlinedIcon />} label="Учебные группы" loading={groupsPending} value={groups.length} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><StatCard icon={<ChatBubbleOutlineIcon />} label="Подключённые беседы" loading={chatsPending} value={chats.filter((chat) => chat.study_group_id !== null).length} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><StatCard icon={<CampaignOutlinedIcon />} label="Активные рассылки" loading={broadcastsPending} value={active.length} /></Grid>
-        <Grid size={{ xs: 12, sm: 6, xl: 3 }}><StatCard icon={<EventOutlinedIcon />} label="Завершённые рассылки" loading={broadcastsPending} value={completed} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 2.4 }}><StatCard icon={<GroupsOutlinedIcon />} label="Учебные группы" loading={statisticsPending} value={statistics?.overview.total_groups ?? 0} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 2.4 }}><StatCard icon={<PeopleOutlinedIcon />} label="Студенты" loading={statisticsPending} value={statistics?.overview.total_students ?? 0} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 2.4 }}><StatCard icon={<CampaignOutlinedIcon />} label="Активные рассылки" loading={statisticsPending} value={statistics?.overview.active_broadcasts ?? 0} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 2.4 }}><StatCard icon={<EventOutlinedIcon />} label="Завершённые" loading={statisticsPending} value={statistics?.overview.completed_broadcasts ?? 0} /></Grid>
+        <Grid size={{ xs: 12, sm: 6, xl: 2.4 }}><StatCard icon={<HowToRegOutlinedIcon />} label="Ответы сегодня" loading={statisticsPending} value={statistics?.overview.responses_today ?? 0} /></Grid>
       </Grid>
 
       {unlinkedChats.length > 0 ? <Alert severity="warning">{unlinkedChats.length} {unlinkedChats.length === 1 ? "беседа не привязана" : "беседы не привязаны"} к учебной группе. <Button component={Link} size="small" to="/study_groups">Настроить</Button></Alert> : null}
