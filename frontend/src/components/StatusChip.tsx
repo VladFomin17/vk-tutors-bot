@@ -1,7 +1,9 @@
 import { Chip } from "@mui/material";
 
+import { isBroadcastCompleted } from "../utils/broadcasts";
+
 export function BroadcastStatusChip({ deadline }: { deadline: string }) {
-  const completed = new Date(deadline).getTime() < Date.now();
+  const completed = isBroadcastCompleted(deadline);
   return (
     <Chip
       color={completed ? "default" : "success"}

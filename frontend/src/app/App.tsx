@@ -3,6 +3,7 @@ import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from "re
 import { Admin, Resource } from "react-admin";
 
 import { AdminLayout, broadcastIcon, groupIcon } from "../layouts/AdminLayout";
+import { LoginPage } from "../pages/auth/LoginPage";
 import { authProvider } from "../services/authProvider";
 import { dataProvider } from "../services/dataProvider";
 import { theme } from "./theme";
@@ -22,7 +23,9 @@ export function App() {
       dataProvider={dataProvider}
       disableTelemetry
       layout={AdminLayout}
+      loginPage={LoginPage}
       theme={theme}
+      title="VK Tutors"
     >
       <Resource create={BroadcastCreatePage} icon={broadcastIcon} list={BroadcastListPage} name="broadcasts" options={{ label: "Рассылки" }} show={BroadcastShowPage} />
       <Resource icon={groupIcon} list={GroupListPage} name="study_groups" options={{ label: "Учебные группы" }} show={GroupShowPage} />

@@ -32,32 +32,27 @@ import { EmptyState } from "../../components/EmptyState";
 import { PageHeader } from "../../components/PageHeader";
 import { BroadcastStatusChip } from "../../components/StatusChip";
 import type { Broadcast } from "../../types/entities";
+import { isBroadcastCompleted, sortBroadcasts, type BroadcastSort } from "../../utils/broadcasts";
 import { formatDateTime } from "../../utils/date";
 
 type StatusFilter = "all" | "active" | "completed";
-type SortOrder = "created_desc" | "deadline_asc" | "deadline_desc" | "title_asc";
 
 export function BroadcastListPage() {
   const { data = [], isPending } = useGetList<Broadcast>("broadcasts");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
-  const [sort, setSort] = useState<SortOrder>("created_desc");
+  const [sort, setSort] = useState<BroadcastSort>("created_desc");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("ru-RU");
     const rows = data.filter((broadcast) => {
-        const completed = new Date(broadcast.deadline).getTime() < Date.now();
+        const completed = isBroadcastCompleted(broadcast.deadline);
         const matchesStatus = status === "all" || (status === "completed") === completed;
         return matchesStatus && broadcast.title.toLocaleLowerCase("ru-RU").includes(query);
       });
-    return [...rows].sort((left, right) => {
-      if (sort === "deadline_asc") return new Date(left.deadline).getTime() - new Date(right.deadline).getTime();
-      if (sort === "deadline_desc") return new Date(right.deadline).getTime() - new Date(left.deadline).getTime();
-      if (sort === "title_asc") return left.title.localeCompare(right.title, "ru-RU");
-      return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
-    });
+    return sortBroadcasts(rows, sort);
   }, [data, search, sort, status]);
 
   const visibleRows = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
@@ -101,7 +96,7 @@ export function BroadcastListPage() {
             </Select>
           </FormControl>
           <FormControl size="small" sx={{ minWidth: 190 }}>
-            <Select aria-label="Сортировка рассылок" onChange={(event) => setSort(event.target.value as SortOrder)} value={sort}>
+            <Select aria-label="Сортировка рассылок" onChange={(event) => setSort(event.target.value as BroadcastSort)} value={sort}>
               <MenuItem value="created_desc">Сначала новые</MenuItem>
               <MenuItem value="deadline_asc">Ближайший дедлайн</MenuItem>
               <MenuItem value="deadline_desc">Поздний дедлайн</MenuItem>
