@@ -5,10 +5,12 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, HttpUrl, field_validator
-from starlette.responses import StreamingResponse
+from starlette.responses import FileResponse, StreamingResponse
 
+from app.core.config import get_settings
 from app.services import broadcasts
 from app.services import exports
+from app.services import media
 from app.services import responses
 from app.services.auth import require_admin
 
@@ -61,6 +63,12 @@ class BroadcastSummaryResponse(BaseModel):
     recipient_count: int
 
 
+class ResponseMediaResponse(BaseModel):
+    id: int
+    content_type: str
+    size_bytes: int
+
+
 class BroadcastResultResponse(BaseModel):
     id: str
     target_id: int
@@ -73,6 +81,7 @@ class BroadcastResultResponse(BaseModel):
     attachments: list[dict[str, Any]]
     responded_at: datetime | None
     is_late: bool | None
+    media: list[ResponseMediaResponse]
 
 
 @router.get("/broadcasts", response_model=list[BroadcastSummaryResponse])
@@ -86,6 +95,18 @@ async def get_broadcast_results(broadcast_id: int) -> list[dict[str, object]]:
         return await responses.list_results(broadcast_id)
     except responses.BroadcastNotFoundError as error:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
+
+
+@router.get("/response-media/{media_id}")
+async def get_response_media(media_id: int) -> FileResponse:
+    metadata = await media.get_media(media_id)
+    if metadata is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Image not found")
+    root = get_settings().media_root.resolve()
+    path = (root / str(metadata["storage_name"])).resolve()
+    if not path.is_relative_to(root) or not path.is_file():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Image not found")
+    return FileResponse(path, media_type=str(metadata["content_type"]))
 
 
 @router.get("/broadcasts/{broadcast_id}/export.{file_type}")

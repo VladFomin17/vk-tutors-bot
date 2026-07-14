@@ -22,6 +22,7 @@ type BroadcastResult = {
     type?: string;
     photo?: { sizes?: Array<{ url?: string }> };
   }>;
+  media: Array<{ id: number; content_type: string; size_bytes: number }>;
   responded_at: string | null;
   is_late: boolean | null;
 };
@@ -174,7 +175,7 @@ export function BroadcastsPanel({ groups, linkedGroupIds }: BroadcastsPanelProps
                       : ""}
                   </td>
                   <td>
-                    {result.attachments.flatMap(imageUrl).map((url, index) => (
+                    {resultImageUrls(result).map((url, index) => (
                       <a key={url} href={url} target="_blank" rel="noreferrer">
                         Изображение {index + 1}{" "}
                       </a>
@@ -197,4 +198,11 @@ function imageUrl(attachment: BroadcastResult["attachments"][number]): string[] 
   const sizes = attachment.photo?.sizes ?? [];
   const url = sizes[sizes.length - 1]?.url;
   return url ? [url] : [];
+}
+
+function resultImageUrls(result: BroadcastResult): string[] {
+  if (result.media.length > 0) {
+    return result.media.map((media) => `/api/v1/response-media/${media.id}`);
+  }
+  return result.attachments.flatMap(imageUrl);
 }

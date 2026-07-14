@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -25,6 +26,8 @@ class Settings(BaseSettings):
     outbox_poll_seconds: int = Field(default=10, ge=1, le=60)
     outbox_batch_size: int = Field(default=20, ge=1, le=100)
     outbox_max_attempts: int = Field(default=5, ge=1, le=20)
+    media_root: Path = Path("/data/media")
+    max_attachment_bytes: int = Field(default=10_485_760, ge=1_024, le=52_428_800)
 
     model_config = SettingsConfigDict(
         env_file=("../.env", ".env"),

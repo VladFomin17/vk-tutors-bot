@@ -43,6 +43,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    volumes:
+      - media_data:/data/media:ro
 
   vk-listener:
     build: ./backend
@@ -54,6 +56,8 @@ services:
       migrate:
         condition: service_completed_successfully
     restart: unless-stopped
+    volumes:
+      - media_data:/data/media
 
   worker:
     build: ./backend
@@ -76,3 +80,4 @@ services:
 
 volumes:
   postgres_data:
+  media_data:

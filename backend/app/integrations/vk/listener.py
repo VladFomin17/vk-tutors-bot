@@ -15,7 +15,9 @@ from app.integrations.vk.client import (
     build_client,
 )
 from app.integrations.vk.confirmations import parse_confirmation
+from app.integrations.vk.media import remove_files, store_images
 from app.services.chat_directory import list_chats_missing_titles, needs_sync, sync_chat
+from app.services.media import MediaJob, list_missing_media_jobs, replace_response_media
 from app.services.responses import record_confirmation
 
 logger = logging.getLogger(__name__)
@@ -60,8 +62,37 @@ async def handle_update(client: VkClient, update: dict[str, Any]) -> None:
     confirmation = parse_confirmation(update, client.group_id)
     if confirmation is not None:
         result = await record_confirmation(**vars(confirmation))
-        if result != "ignored":
-            logger.info("VK confirmation from user %s: %s", confirmation.vk_user_id, result)
+        settings = get_settings()
+        remove_files(settings.media_root, list(result.obsolete_storage_names))
+        if result.media_job is not None:
+            await store_media(result.media_job)
+        if result.status != "ignored":
+            logger.info(
+                "VK confirmation from user %s: %s",
+                confirmation.vk_user_id,
+                result.status,
+            )
+
+
+async def store_media(job: MediaJob) -> None:
+    settings = get_settings()
+    files = await store_images(
+        job,
+        settings.media_root,
+        settings.max_attachment_bytes,
+        settings.vk_request_timeout_seconds,
+    )
+    old_names = await replace_response_media(job, files)
+    new_names = {file.storage_name for file in files}
+    if old_names is None:
+        remove_files(settings.media_root, list(new_names))
+        return
+    remove_files(
+        settings.media_root,
+        [storage_name for storage_name in old_names if storage_name not in new_names],
+    )
+    if files:
+        logger.info("Stored %s image(s) for response %s", len(files), job.response_id)
 
 
 async def retry_update(
@@ -106,6 +137,11 @@ async def run() -> None:
                 await sync_reference(client, ChatReference(peer_id, None))
             except (VkApiError, SQLAlchemyError):
                 logger.exception("Failed to restore VK chat %s title", peer_id)
+        for job in await list_missing_media_jobs():
+            try:
+                await store_media(job)
+            except OSError:
+                logger.exception("Failed to restore media for response %s", job.response_id)
 
         endpoint: LongPollEndpoint | None = None
         while True:

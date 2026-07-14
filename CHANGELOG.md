@@ -15,6 +15,7 @@
 - APScheduler worker for idempotent VK delivery and deadline-safe reminders.
 - Idempotent reply confirmation capture and per-student results in the admin panel.
 - XLSX and DOCX broadcast result exports.
+- Persistent, authenticated storage for VK response images.
 
 ### Fixed
 

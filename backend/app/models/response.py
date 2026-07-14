@@ -1,6 +1,17 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Identity, Text, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Identity,
+    Integer,
+    SmallInteger,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -35,3 +46,20 @@ class BroadcastResponse(Base):
     attachments: Mapped[list[dict[str, object]]] = mapped_column(JSONB, default=list)
     responded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     is_late: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+
+class ResponseMedia(Base):
+    __tablename__ = "response_media"
+    __table_args__ = (
+        UniqueConstraint("response_id", "position", name="uq_response_media_position"),
+        UniqueConstraint("storage_name", name="uq_response_media_storage_name"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    response_id: Mapped[int] = mapped_column(
+        ForeignKey("broadcast_responses.id", ondelete="CASCADE")
+    )
+    position: Mapped[int] = mapped_column(SmallInteger)
+    storage_name: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(50))
+    size_bytes: Mapped[int] = mapped_column(Integer)

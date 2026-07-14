@@ -15,6 +15,7 @@ def test_directory_models_are_registered() -> None:
         "broadcasts",
         "chat_members",
         "outbound_messages",
+        "response_media",
         "study_groups",
         "vk_chats",
         "vk_users",
