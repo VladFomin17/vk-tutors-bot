@@ -10,6 +10,7 @@ def test_directory_models_are_registered() -> None:
     assert set(Base.metadata.tables) == {
         "auth_sessions",
         "broadcast_recipients",
+        "broadcast_responses",
         "broadcast_targets",
         "broadcasts",
         "chat_members",

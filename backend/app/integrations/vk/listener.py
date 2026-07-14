@@ -14,7 +14,9 @@ from app.integrations.vk.client import (
     VkClient,
     build_client,
 )
+from app.integrations.vk.confirmations import parse_confirmation
 from app.services.chat_directory import list_chats_missing_titles, needs_sync, sync_chat
+from app.services.responses import record_confirmation
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +57,11 @@ async def handle_update(client: VkClient, update: dict[str, Any]) -> None:
     peer_id, from_id = message
     if await needs_sync(peer_id, from_id):
         await sync_reference(client, ChatReference(peer_id, None))
+    confirmation = parse_confirmation(update, client.group_id)
+    if confirmation is not None:
+        result = await record_confirmation(**vars(confirmation))
+        if result != "ignored":
+            logger.info("VK confirmation from user %s: %s", confirmation.vk_user_id, result)
 
 
 async def retry_update(

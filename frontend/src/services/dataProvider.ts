@@ -24,6 +24,8 @@ export const dataProvider: DataProvider = {
       path = "/study-groups";
     } else if (resource === "broadcasts") {
       path = "/broadcasts";
+    } else if (resource === "broadcast_results" && params.filter.broadcast_id) {
+      path = `/broadcasts/${params.filter.broadcast_id}/results`;
     } else if (resource === "vk_chats") {
       path = "/vk-chats";
     } else if (resource === "chat_members" && params.filter.chat_id) {

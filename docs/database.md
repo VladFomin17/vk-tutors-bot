@@ -13,6 +13,9 @@ erDiagram
     BROADCAST_TARGET ||--|{ BROADCAST_RECIPIENT : "фиксирует"
     VK_USER ||--o{ BROADCAST_RECIPIENT : "получатель"
     BROADCAST_TARGET ||--|{ OUTBOUND_MESSAGE : "порождает"
+    BROADCAST_TARGET ||--o{ BROADCAST_RESPONSE : "получает"
+    OUTBOUND_MESSAGE ||--o{ BROADCAST_RESPONSE : "цитируется"
+    VK_USER ||--o{ BROADCAST_RESPONSE : "отвечает"
 
     STUDY_GROUP {
         bigint id PK
@@ -66,6 +69,19 @@ erDiagram
         integer random_id
         varchar broadcast_token UK
     }
+    BROADCAST_RESPONSE {
+        bigint id PK
+        bigint target_id FK
+        bigint outbound_message_id FK
+        bigint vk_user_id FK
+        bigint peer_id
+        bigint vk_message_id
+        bigint conversation_message_id
+        text text
+        jsonb attachments
+        timestamptz responded_at
+        boolean is_late
+    }
 ```
 
 - `vk_chats` создаётся при обнаружении события VK и позднее связывается с одной учебной группой.
@@ -73,3 +89,4 @@ erDiagram
 - `role`: `unknown`, `student`, `tutor` или `leader`. Новые участники получают `unknown` до классификации.
 - `broadcast_recipients` хранит неизменяемый снимок активных первокурсников на момент создания рассылки.
 - `outbound_messages` является PostgreSQL outbox: начальная отправка планируется сразу, напоминание — за 24 часа до дедлайна, если этот момент ещё не прошёл.
+- `broadcast_responses` хранит первую подходящую reply-попытку каждого получателя; уникальный `(peer_id, conversation_message_id)` делает обработку Long Poll идемпотентной.

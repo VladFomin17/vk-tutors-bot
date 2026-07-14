@@ -1,11 +1,12 @@
 import logging
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 from app.services import broadcasts
+from app.services import responses
 from app.services.auth import require_admin
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ class BroadcastCreate(BaseModel):
         return value
 
 
-class BroadcastResponse(BaseModel):
+class BroadcastSummaryResponse(BaseModel):
     id: int
     title: str
     message_text: str
@@ -57,14 +58,36 @@ class BroadcastResponse(BaseModel):
     recipient_count: int
 
 
-@router.get("/broadcasts", response_model=list[BroadcastResponse])
+class BroadcastResultResponse(BaseModel):
+    id: str
+    target_id: int
+    study_group_name: str
+    vk_user_id: int
+    first_name: str
+    last_name: str
+    responded: bool
+    text: str | None
+    attachments: list[dict[str, Any]]
+    responded_at: datetime | None
+    is_late: bool | None
+
+
+@router.get("/broadcasts", response_model=list[BroadcastSummaryResponse])
 async def get_broadcasts() -> list[dict[str, object]]:
     return await broadcasts.list_broadcasts()
 
 
+@router.get("/broadcasts/{broadcast_id}/results", response_model=list[BroadcastResultResponse])
+async def get_broadcast_results(broadcast_id: int) -> list[dict[str, object]]:
+    try:
+        return await responses.list_results(broadcast_id)
+    except responses.BroadcastNotFoundError as error:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
+
+
 @router.post(
     "/broadcasts",
-    response_model=BroadcastResponse,
+    response_model=BroadcastSummaryResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def post_broadcast(payload: BroadcastCreate) -> dict[str, object]:

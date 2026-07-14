@@ -1,4 +1,4 @@
-import { type FormEvent } from "react";
+import { type FormEvent, useState } from "react";
 import { useCreate, useGetList, useNotify } from "react-admin";
 
 type StudyGroup = { id: number; name: string; is_active: boolean };
@@ -10,6 +10,21 @@ type Broadcast = {
   target_count: number;
   recipient_count: number;
 };
+type BroadcastResult = {
+  id: string;
+  study_group_name: string;
+  vk_user_id: number;
+  first_name: string;
+  last_name: string;
+  responded: boolean;
+  text: string | null;
+  attachments: Array<{
+    type?: string;
+    photo?: { sizes?: Array<{ url?: string }> };
+  }>;
+  responded_at: string | null;
+  is_late: boolean | null;
+};
 
 type BroadcastsPanelProps = {
   groups: StudyGroup[];
@@ -18,8 +33,14 @@ type BroadcastsPanelProps = {
 
 export function BroadcastsPanel({ groups, linkedGroupIds }: BroadcastsPanelProps) {
   const notify = useNotify();
+  const [selectedBroadcastId, setSelectedBroadcastId] = useState<number | null>(null);
   const [createBroadcast, { isPending }] = useCreate();
   const { data: broadcasts = [] } = useGetList<Broadcast>("broadcasts");
+  const { data: results = [] } = useGetList<BroadcastResult>(
+    "broadcast_results",
+    { filter: { broadcast_id: selectedBroadcastId } },
+    { enabled: selectedBroadcastId !== null },
+  );
   const availableGroups = groups.filter((group) => linkedGroupIds.has(group.id));
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -111,9 +132,65 @@ export function BroadcastsPanel({ groups, linkedGroupIds }: BroadcastsPanelProps
       {broadcasts.map((broadcast) => (
         <article key={broadcast.id}>
           <strong>{broadcast.title}</strong> — групп: {broadcast.target_count}, получателей:{" "}
-          {broadcast.recipient_count}, дедлайн: {new Date(broadcast.deadline).toLocaleString("ru-RU")}
+          {broadcast.recipient_count}, дедлайн: {new Date(broadcast.deadline).toLocaleString("ru-RU")}{" "}
+          <button type="button" onClick={() => setSelectedBroadcastId(broadcast.id)}>
+            Результаты
+          </button>
         </article>
       ))}
+
+      {selectedBroadcastId !== null ? (
+        <section>
+          <h3>Результаты рассылки</h3>
+          {results.length === 0 ? <p>В снимке рассылки нет студентов.</p> : null}
+          <table>
+            <thead>
+              <tr>
+                <th>Группа</th>
+                <th>Студент</th>
+                <th>Статус</th>
+                <th>Ответ</th>
+                <th>Вложения</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((result) => (
+                <tr key={result.id}>
+                  <td>{result.study_group_name}</td>
+                  <td>{`${result.last_name} ${result.first_name}`}</td>
+                  <td>
+                    {result.responded
+                      ? `Ответил${result.is_late ? " после дедлайна" : ""}`
+                      : "Не ответил"}
+                  </td>
+                  <td>
+                    {result.text ?? ""}
+                    {result.responded_at
+                      ? ` (${new Date(result.responded_at).toLocaleString("ru-RU")})`
+                      : ""}
+                  </td>
+                  <td>
+                    {result.attachments.flatMap(imageUrl).map((url, index) => (
+                      <a key={url} href={url} target="_blank" rel="noreferrer">
+                        Изображение {index + 1}{" "}
+                      </a>
+                    ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ) : null}
     </section>
   );
+}
+
+function imageUrl(attachment: BroadcastResult["attachments"][number]): string[] {
+  if (attachment.type !== "photo") {
+    return [];
+  }
+  const sizes = attachment.photo?.sizes ?? [];
+  const url = sizes[sizes.length - 1]?.url;
+  return url ? [url] : [];
 }

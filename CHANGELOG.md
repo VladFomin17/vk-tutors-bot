@@ -13,6 +13,7 @@
 - Protected study group, VK chat linking and member role management.
 - Broadcast creation, recipient snapshots and transactional PostgreSQL outbox jobs.
 - APScheduler worker for idempotent VK delivery and deadline-safe reminders.
+- Idempotent reply confirmation capture and per-student results in the admin panel.
 
 ### Fixed
 
