@@ -1,4 +1,4 @@
-import { Admin } from "react-admin";
+import { Admin, Resource } from "react-admin";
 
 import { Dashboard } from "../features/dashboard/Dashboard";
 import { authProvider } from "../services/authProvider";
@@ -11,6 +11,9 @@ export function App() {
       dashboard={Dashboard}
       dataProvider={dataProvider}
       disableTelemetry
-    />
+    >
+      <Resource name="study_groups" />
+      <Resource name="vk_chats" />
+    </Admin>
   );
 }

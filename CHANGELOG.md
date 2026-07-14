@@ -11,3 +11,7 @@
 - VK Long Poll listener with idempotent chat and member synchronization.
 - Single-administrator authentication with revocable database sessions.
 - Protected study group, VK chat linking and member role management.
+
+### Fixed
+
+- Empty React Admin screen caused by missing resource registration.
