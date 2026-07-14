@@ -8,10 +8,14 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .venv/
+*.egg-info/
 
 node_modules/
 dist/
 coverage/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
 
 .idea/
 .vscode/
@@ -20,4 +24,3 @@ Thumbs.db
 
 media/
 exports/
-

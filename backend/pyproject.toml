@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vk-tutors-bot-backend"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic==1.18.5",
+    "asyncpg==0.31.0",
+    "fastapi==0.139.0",
+    "pydantic-settings==2.14.2",
+    "sqlalchemy[asyncio]==2.0.51",
+    "uvicorn[standard]==0.51.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx2==2.5.0",
+    "pytest==9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
