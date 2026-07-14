@@ -1,7 +1,9 @@
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import and_, select
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.sql import Select
 
 from app.db.session import session_factory
 from app.models import (
@@ -95,31 +97,7 @@ async def list_results(broadcast_id: int) -> list[dict[str, object]]:
         exists = await session.scalar(select(Broadcast.id).where(Broadcast.id == broadcast_id))
         if exists is None:
             raise BroadcastNotFoundError("Broadcast not found")
-        rows = await session.execute(
-            select(
-                BroadcastTarget.id.label("target_id"),
-                StudyGroup.name.label("study_group_name"),
-                VkUser.vk_user_id,
-                VkUser.first_name,
-                VkUser.last_name,
-                BroadcastResponse.text,
-                BroadcastResponse.attachments,
-                BroadcastResponse.responded_at,
-                BroadcastResponse.is_late,
-            )
-            .join(BroadcastTarget, BroadcastTarget.id == BroadcastRecipient.target_id)
-            .join(StudyGroup, StudyGroup.id == BroadcastTarget.study_group_id)
-            .join(VkUser, VkUser.vk_user_id == BroadcastRecipient.vk_user_id)
-            .outerjoin(
-                BroadcastResponse,
-                and_(
-                    BroadcastResponse.target_id == BroadcastRecipient.target_id,
-                    BroadcastResponse.vk_user_id == BroadcastRecipient.vk_user_id,
-                ),
-            )
-            .where(BroadcastTarget.broadcast_id == broadcast_id)
-            .order_by(StudyGroup.name, VkUser.last_name, VkUser.first_name)
-        )
+        rows = await session.execute(_results_query(broadcast_id))
         return [
             {
                 **dict(row),
@@ -129,3 +107,32 @@ async def list_results(broadcast_id: int) -> list[dict[str, object]]:
             }
             for row in rows.mappings()
         ]
+
+
+def _results_query(broadcast_id: int) -> Select[Any]:
+    return (
+        select(
+            BroadcastTarget.id.label("target_id"),
+            StudyGroup.name.label("study_group_name"),
+            VkUser.vk_user_id,
+            VkUser.first_name,
+            VkUser.last_name,
+            BroadcastResponse.text,
+            BroadcastResponse.attachments,
+            BroadcastResponse.responded_at,
+            BroadcastResponse.is_late,
+        )
+        .select_from(BroadcastRecipient)
+        .join(BroadcastTarget, BroadcastTarget.id == BroadcastRecipient.target_id)
+        .join(StudyGroup, StudyGroup.id == BroadcastTarget.study_group_id)
+        .join(VkUser, VkUser.vk_user_id == BroadcastRecipient.vk_user_id)
+        .outerjoin(
+            BroadcastResponse,
+            and_(
+                BroadcastResponse.target_id == BroadcastRecipient.target_id,
+                BroadcastResponse.vk_user_id == BroadcastRecipient.vk_user_id,
+            ),
+        )
+        .where(BroadcastTarget.broadcast_id == broadcast_id)
+        .order_by(StudyGroup.name, VkUser.last_name, VkUser.first_name)
+    )
