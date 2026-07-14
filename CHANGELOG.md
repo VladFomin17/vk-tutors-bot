@@ -4,6 +4,9 @@
 
 ### Added
 
+- Material UI dashboard layout with separate overview, broadcast, result and group pages.
+- Search, filters, sorting, pagination, loading and empty states in the admin panel.
+- Broadcast preview and in-app response image dialog.
 - Initial FastAPI, Alembic, PostgreSQL and React Admin scaffold.
 - Docker Compose development runtime.
 - VK API feasibility spike and architecture documentation.
