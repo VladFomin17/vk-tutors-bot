@@ -142,6 +142,10 @@ export function BroadcastsPanel({ groups, linkedGroupIds }: BroadcastsPanelProps
       {selectedBroadcastId !== null ? (
         <section>
           <h3>Результаты рассылки</h3>
+          <p>
+            <a href={`/api/v1/broadcasts/${selectedBroadcastId}/export.xlsx`}>Скачать XLSX</a>{" "}
+            <a href={`/api/v1/broadcasts/${selectedBroadcastId}/export.docx`}>Скачать DOCX</a>
+          </p>
           {results.length === 0 ? <p>В снимке рассылки нет студентов.</p> : null}
           <table>
             <thead>

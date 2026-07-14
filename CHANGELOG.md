@@ -14,6 +14,7 @@
 - Broadcast creation, recipient snapshots and transactional PostgreSQL outbox jobs.
 - APScheduler worker for idempotent VK delivery and deadline-safe reminders.
 - Idempotent reply confirmation capture and per-student results in the admin panel.
+- XLSX and DOCX broadcast result exports.
 
 ### Fixed
 

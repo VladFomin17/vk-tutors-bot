@@ -19,6 +19,11 @@ class BroadcastConflictError(RuntimeError):
     pass
 
 
+async def get_broadcast_title(broadcast_id: int) -> str | None:
+    async with session_factory() as session:
+        return await session.scalar(select(Broadcast.title).where(Broadcast.id == broadcast_id))
+
+
 async def list_broadcasts() -> list[dict[str, object]]:
     target_count = (
         select(func.count(BroadcastTarget.id))

@@ -1,11 +1,14 @@
 import logging
 from datetime import datetime
+from io import BytesIO
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, HttpUrl, field_validator
+from starlette.responses import StreamingResponse
 
 from app.services import broadcasts
+from app.services import exports
 from app.services import responses
 from app.services.auth import require_admin
 
@@ -83,6 +86,40 @@ async def get_broadcast_results(broadcast_id: int) -> list[dict[str, object]]:
         return await responses.list_results(broadcast_id)
     except responses.BroadcastNotFoundError as error:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
+
+
+@router.get("/broadcasts/{broadcast_id}/export.{file_type}")
+async def export_broadcast_results(
+    broadcast_id: int,
+    file_type: Literal["xlsx", "docx"],
+) -> StreamingResponse:
+    try:
+        results = await responses.list_results(broadcast_id)
+    except responses.BroadcastNotFoundError as error:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
+    title = await broadcasts.get_broadcast_title(broadcast_id)
+    if title is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Broadcast not found")
+    content = (
+        exports.create_xlsx(title, results)
+        if file_type == "xlsx"
+        else exports.create_docx(title, results)
+    )
+    media_type = (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        if file_type == "xlsx"
+        else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+    logger.info("Broadcast %s results exported as %s", broadcast_id, file_type)
+    return StreamingResponse(
+        BytesIO(content),
+        media_type=media_type,
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="broadcast-{broadcast_id}-results.{file_type}"'
+            )
+        },
+    )
 
 
 @router.post(
