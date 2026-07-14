@@ -51,6 +51,14 @@ async def list_chats() -> list[dict[str, object]]:
         return [dict(row) for row in rows.mappings()]
 
 
+async def list_chats_missing_titles() -> list[int]:
+    async with session_factory() as session:
+        rows = await session.scalars(
+            select(VkChat.peer_id).where(VkChat.title.is_(None), VkChat.is_active.is_(True))
+        )
+        return list(rows)
+
+
 async def link_chat(chat_id: int, study_group_id: int | None) -> dict[str, object]:
     try:
         async with session_factory.begin() as session:
@@ -130,14 +138,18 @@ async def update_member_role(chat_id: int, vk_user_id: int, role: str) -> dict[s
 
 async def needs_sync(peer_id: int, vk_user_id: int) -> bool:
     async with session_factory() as session:
-        chat_id = await session.scalar(select(VkChat.id).where(VkChat.peer_id == peer_id))
-        if chat_id is None:
+        chat = (
+            await session.execute(
+                select(VkChat.id, VkChat.title).where(VkChat.peer_id == peer_id)
+            )
+        ).one_or_none()
+        if chat is None or chat.title is None:
             return True
         if vk_user_id <= 0:
             return False
         membership = await session.scalar(
             select(ChatMember.vk_user_id).where(
-                ChatMember.chat_id == chat_id,
+                ChatMember.chat_id == chat.id,
                 ChatMember.vk_user_id == vk_user_id,
                 ChatMember.is_active.is_(True),
             )

@@ -8,7 +8,7 @@ from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.db.session import engine
 from app.integrations.vk.client import ChatReference, LongPollEndpoint, VkApiError, VkClient
-from app.services.chat_directory import needs_sync, sync_chat
+from app.services.chat_directory import list_chats_missing_titles, needs_sync, sync_chat
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,11 @@ def parse_chat_message(update: dict[str, Any]) -> tuple[int, int] | None:
 
 
 async def sync_reference(client: VkClient, reference: ChatReference) -> None:
+    if reference.title is None:
+        try:
+            reference = await client.get_chat(reference.peer_id)
+        except VkApiError:
+            logger.exception("Failed to load VK chat %s title", reference.peer_id)
     members = await client.get_members(reference.peer_id)
     await sync_chat(reference.peer_id, members, title=reference.title)
     logger.info("VK chat %s synchronized with %s users", reference.peer_id, len(members))
@@ -90,6 +95,16 @@ async def run() -> None:
                 await sync_reference(client, chat)
             except (VkApiError, SQLAlchemyError):
                 logger.exception("Failed to synchronize VK chat %s", chat.peer_id)
+        try:
+            missing_title_peer_ids = await list_chats_missing_titles()
+        except SQLAlchemyError:
+            logger.exception("Failed to load VK chats without titles")
+            missing_title_peer_ids = []
+        for peer_id in missing_title_peer_ids:
+            try:
+                await sync_reference(client, ChatReference(peer_id, None))
+            except (VkApiError, SQLAlchemyError):
+                logger.exception("Failed to restore VK chat %s title", peer_id)
 
         endpoint: LongPollEndpoint | None = None
         while True:

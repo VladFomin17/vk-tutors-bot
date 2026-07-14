@@ -97,8 +97,6 @@ async def create_broadcast(
             group_id: [row.vk_user_id for row in member_rows if row.study_group_id == group_id]
             for group_id in study_group_ids
         }
-        if any(not students for students in students_by_group.values()):
-            raise BroadcastConflictError("Every study group must have at least one active student")
 
         broadcast = Broadcast(
             title=title,

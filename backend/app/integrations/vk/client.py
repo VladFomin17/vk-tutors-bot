@@ -24,6 +24,22 @@ class LongPollEndpoint:
     ts: str
 
 
+def _parse_chat_reference(conversation: object) -> ChatReference | None:
+    if not isinstance(conversation, dict):
+        return None
+    peer = conversation.get("peer")
+    if not isinstance(peer, dict) or not isinstance(peer.get("id"), int):
+        return None
+    peer_id = peer["id"]
+    if peer_id < 2_000_000_000:
+        return None
+    settings = conversation.get("chat_settings")
+    title = settings.get("title") if isinstance(settings, dict) else None
+    if isinstance(title, str) and len(title) > 255:
+        raise VkApiError("VK chat title is too long")
+    return ChatReference(peer_id, title if isinstance(title, str) else None)
+
+
 def _request_json(
     url: str,
     *,
@@ -97,19 +113,20 @@ class VkClient:
         for item in response["items"]:
             if not isinstance(item, dict) or not isinstance(item.get("conversation"), dict):
                 continue
-            conversation = item["conversation"]
-            peer = conversation.get("peer")
-            if not isinstance(peer, dict) or not isinstance(peer.get("id"), int):
-                continue
-            peer_id = peer["id"]
-            if peer_id < 2_000_000_000:
-                continue
-            settings = conversation.get("chat_settings")
-            title = settings.get("title") if isinstance(settings, dict) else None
-            if isinstance(title, str) and len(title) > 255:
-                raise VkApiError("VK chat title is too long")
-            chats.append(ChatReference(peer_id, title if isinstance(title, str) else None))
+            reference = _parse_chat_reference(item["conversation"])
+            if reference is not None:
+                chats.append(reference)
         return chats
+
+    async def get_chat(self, peer_id: int) -> ChatReference:
+        response = await self.api("messages.getConversationsById", peer_ids=peer_id)
+        if not isinstance(response, dict) or not isinstance(response.get("items"), list):
+            raise VkApiError("VK conversation response is invalid")
+        for conversation in response["items"]:
+            reference = _parse_chat_reference(conversation)
+            if reference is not None and reference.peer_id == peer_id:
+                return reference
+        raise VkApiError("VK conversation was not found")
 
     async def get_members(self, peer_id: int) -> list[tuple[int, str, str]]:
         response = await self.api("messages.getConversationMembers", peer_id=peer_id)

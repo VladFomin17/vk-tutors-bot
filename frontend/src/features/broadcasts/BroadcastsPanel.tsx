@@ -72,7 +72,8 @@ export function BroadcastsPanel({ groups, linkedGroupIds }: BroadcastsPanelProps
         </p>
         <p>
           <label>
-            Ссылка <input name="link" type="url" maxLength={2048} />
+            Ссылка на опрос (необязательно){" "}
+            <input name="link" type="url" maxLength={2048} placeholder="https://..." />
           </label>
         </p>
         <p>
