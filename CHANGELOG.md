@@ -7,3 +7,4 @@
 - Initial FastAPI, Alembic, PostgreSQL and React Admin scaffold.
 - Docker Compose development runtime.
 - VK API feasibility spike and architecture documentation.
+- Study group, VK chat, VK user and chat membership database schema.

@@ -18,9 +18,10 @@ API healthcheck: `http://localhost/api/v1/health/ready`.
 
 ## Текущий этап
 
-Scaffold включает PostgreSQL, Alembic, FastAPI и React Admin. Worker и VK
-listener будут добавлены вместе с первой миграцией бизнес-сущностей, чтобы не
-запускать процессы, которые получают и теряют события без сохранения.
+Сервис включает PostgreSQL, Alembic, FastAPI, React Admin и первую миграцию
+справочников. Worker и VK listener будут добавлены вместе с обработкой и
+сохранением входящих событий.
 
 Архитектура описана в [`docs/architecture.md`](docs/architecture.md), результаты
-проверки VK API — в [`docs/vk-spike.md`](docs/vk-spike.md).
+проверки VK API — в [`docs/vk-spike.md`](docs/vk-spike.md), схема данных — в
+[`docs/database.md`](docs/database.md).
