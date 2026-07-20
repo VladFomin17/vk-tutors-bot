@@ -30,6 +30,7 @@ import { PageHeader } from "../../components/PageHeader";
 import { QueryErrorState } from "../../components/QueryErrorState";
 import { SectionCard } from "../../components/SectionCard";
 import type { StudyGroup, VkChat } from "../../types/entities";
+import { formatDateTime } from "../../utils/date";
 
 export function GroupListPage() {
   const notify = useNotify();
@@ -71,7 +72,7 @@ export function GroupListPage() {
         {!groupsPending && groups.length === 0 ? <EmptyState title="Групп пока нет" description="Создайте учебную группу и привяжите к ней VK-беседу." /> : (
           <TableContainer>
             <Table aria-label="Учебные группы">
-              <TableHead><TableRow><TableCell>Название</TableCell><TableCell>VK-беседа</TableCell><TableCell>Состояние</TableCell><TableCell align="right">Действия</TableCell></TableRow></TableHead>
+              <TableHead><TableRow><TableCell>Название</TableCell><TableCell>VK-беседа</TableCell><TableCell>Студенты</TableCell><TableCell>Не классифицированы</TableCell><TableCell>Последняя активность</TableCell><TableCell>Состояние</TableCell><TableCell align="right">Действия</TableCell></TableRow></TableHead>
               <TableBody>
                 {groups.map((group) => {
                   const chat = chats.find((item) => item.study_group_id === group.id);
@@ -79,6 +80,9 @@ export function GroupListPage() {
                     <TableRow hover key={group.id}>
                       <TableCell sx={{ fontWeight: 600 }}>{group.name}</TableCell>
                       <TableCell>{chat?.title ?? (chat ? `Беседа ${chat.id}` : "Не подключена")}</TableCell>
+                      <TableCell>{group.student_count}</TableCell>
+                      <TableCell><Chip color={group.unknown_count > 0 ? "warning" : "default"} label={group.unknown_count} size="small" variant={group.unknown_count > 0 ? "filled" : "outlined"} /></TableCell>
+                      <TableCell>{group.last_activity_at ? formatDateTime(group.last_activity_at) : "Нет активности"}</TableCell>
                       <TableCell><Chip color={chat ? "success" : "default"} label={chat ? "Подключена" : "Требует настройки"} size="small" variant={chat ? "filled" : "outlined"} /></TableCell>
                       <TableCell align="right">
                         {chat ? <Button component={Link} size="small" startIcon={<PeopleOutlineIcon />} to={`/study_groups/${group.id}/show`}>Участники</Button> : "—"}

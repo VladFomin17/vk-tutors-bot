@@ -45,3 +45,29 @@ def test_member_role_rejects_unknown_value() -> None:
         app.dependency_overrides.clear()
 
     assert response.status_code == 422
+
+
+def test_study_groups_include_activity_metrics(monkeypatch: MonkeyPatch) -> None:
+    async def fake_groups() -> list[dict[str, object]]:
+        return [
+            {
+                "id": 1,
+                "name": "ИВТ-101",
+                "is_active": True,
+                "student_count": 20,
+                "unknown_count": 2,
+                "last_activity_at": "2026-07-20T12:00:00+00:00",
+            }
+        ]
+
+    app.dependency_overrides[require_admin] = lambda: None
+    monkeypatch.setattr(directory.chat_directory, "list_study_groups", fake_groups)
+    try:
+        with TestClient(app) as client:
+            response = client.get("/api/v1/study-groups")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()[0]["student_count"] == 20
+    assert response.json()[0]["unknown_count"] == 2

@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -28,6 +29,9 @@ class StudyGroupResponse(BaseModel):
     id: int
     name: str
     is_active: bool
+    student_count: int = 0
+    unknown_count: int = 0
+    last_activity_at: datetime | None = None
 
 
 class ChatLinkUpdate(BaseModel):

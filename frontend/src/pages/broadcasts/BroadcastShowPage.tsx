@@ -1,6 +1,7 @@
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import SearchIcon from "@mui/icons-material/Search";
 import {
   Box,
@@ -27,7 +28,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useMemo, useState } from "react";
-import { Title, useGetList } from "react-admin";
+import { Title, useGetList, useNotify } from "react-admin";
 import { Link, useParams } from "react-router-dom";
 
 import { EmptyState } from "../../components/EmptyState";
@@ -35,21 +36,25 @@ import { PageHeader } from "../../components/PageHeader";
 import { QueryErrorState } from "../../components/QueryErrorState";
 import { SectionCard } from "../../components/SectionCard";
 import { BroadcastStatusChip } from "../../components/StatusChip";
-import type { Broadcast, BroadcastResult } from "../../types/entities";
+import { retryDelivery } from "../../services/dataProvider";
+import type { Broadcast, BroadcastDelivery, BroadcastResult, DeliveryStage, DeliveryStatus } from "../../types/entities";
 import { formatDateTime } from "../../utils/date";
 
 type ResultFilter = "all" | "responded" | "unanswered";
 
 export function BroadcastShowPage() {
+  const notify = useNotify();
   const { id } = useParams();
   const broadcastId = Number(id);
   const { data: broadcasts = [], error: broadcastsError, refetch: refetchBroadcasts } = useGetList<Broadcast>("broadcasts");
   const { data: results = [], isPending, error: resultsError, refetch: refetchResults } = useGetList<BroadcastResult>("broadcast_results", { filter: { broadcast_id: broadcastId } }, { enabled: Number.isFinite(broadcastId) });
+  const { data: deliveries = [], isPending: deliveriesPending, error: deliveriesError, refetch: refetchDeliveries } = useGetList<BroadcastDelivery>("broadcast_deliveries", { filter: { broadcast_id: broadcastId } }, { enabled: Number.isFinite(broadcastId), refetchInterval: 5_000 });
   const broadcast = broadcasts.find((item) => item.id === broadcastId);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<ResultFilter>("all");
   const [group, setGroup] = useState("all");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<number | null>(null);
   const respondedCount = results.filter((result) => result.responded).length;
   const completion = results.length === 0 ? 0 : Math.round((respondedCount / results.length) * 100);
   const groups = [...new Set(results.map((result) => result.study_group_name))].sort();
@@ -63,11 +68,24 @@ export function BroadcastShowPage() {
     });
   }, [group, results, search, status]);
 
+  async function retry(outboundId: number) {
+    setRetryingId(outboundId);
+    try {
+      await retryDelivery(broadcastId, outboundId);
+      notify("Отправка снова поставлена в очередь", { type: "success" });
+      await refetchDeliveries();
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Не удалось повторить отправку", { type: "error" });
+    } finally {
+      setRetryingId(null);
+    }
+  }
+
   return (
     <Stack spacing={3}>
       <Title title={broadcast?.title ?? "Результаты рассылки"} />
       <PageHeader title={broadcast?.title ?? "Результаты рассылки"} description={broadcast ? `Дедлайн: ${formatDateTime(broadcast.deadline)}` : "Загрузка данных рассылки…"} />
-      {broadcastsError || resultsError ? <QueryErrorState message="Не удалось загрузить результаты рассылки." onRetry={() => Promise.all([refetchBroadcasts(), refetchResults()])} /> : null}
+      {broadcastsError || resultsError || deliveriesError ? <QueryErrorState message="Не удалось загрузить данные рассылки." onRetry={() => Promise.all([refetchBroadcasts(), refetchResults(), refetchDeliveries()])} /> : null}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
         <Button component={Link} startIcon={<ArrowBackIcon />} to="/broadcasts">К рассылкам</Button>
         <Button component="a" href={`/api/v1/broadcasts/${broadcastId}/export.xlsx`} startIcon={<DownloadOutlinedIcon />} variant="outlined">XLSX</Button>
@@ -83,6 +101,28 @@ export function BroadcastShowPage() {
           </SectionCard>
         </Grid>
       </Grid>
+
+      <SectionCard title="Доставка" description="Состояние основной отправки и напоминания для каждой выбранной беседы.">
+        {deliveriesPending ? <LinearProgress /> : (
+          <TableContainer component={Paper} variant="outlined">
+            <Table aria-label="Состояние доставки">
+              <TableHead><TableRow><TableCell>Беседа</TableCell><TableCell>Основное сообщение</TableCell><TableCell>Напоминание</TableCell></TableRow></TableHead>
+              <TableBody>
+                {deliveries.map((delivery) => (
+                  <TableRow key={delivery.id}>
+                    <TableCell>
+                      <Typography>{delivery.chat_title || `Беседа VK ${delivery.peer_id}`}</Typography>
+                      <Typography color="text.secondary" variant="caption">{delivery.study_group_name}</Typography>
+                    </TableCell>
+                    <TableCell><DeliveryState onRetry={retry} retryingId={retryingId} stage={delivery.initial} /></TableCell>
+                    <TableCell><DeliveryState onRetry={retry} retryingId={retryingId} stage={delivery.reminder} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </SectionCard>
 
       <SectionCard title="Ответы" description="Последующий корректный ответ заменяет предыдущий.">
         <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} sx={{ mb: 2 }}>
@@ -143,6 +183,35 @@ export function BroadcastShowPage() {
         <DialogTitle>Изображение ответа</DialogTitle>
         <DialogContent>{imageUrl ? <Box alt="Изображение, прикреплённое к ответу" component="img" src={imageUrl} sx={{ display: "block", maxHeight: "75vh", maxWidth: "100%", mx: "auto" }} /> : null}</DialogContent>
       </Dialog>
+    </Stack>
+  );
+}
+
+const deliveryLabels: Record<DeliveryStatus, string> = {
+  pending: "Ожидает отправки",
+  processing: "Отправляется",
+  sent: "Отправлено",
+  failed: "Ошибка",
+  cancelled: "Отменено",
+};
+
+function DeliveryState({ stage, retryingId, onRetry }: { stage: DeliveryStage | null; retryingId: number | null; onRetry: (id: number) => void }) {
+  if (!stage) return <Chip label="Не запланировано" size="small" variant="outlined" />;
+  const color = stage.status === "sent" ? "success" : stage.status === "failed" ? "error" : stage.status === "pending" ? "warning" : "default";
+  return (
+    <Stack spacing={0.75} sx={{ minWidth: 190 }}>
+      <Chip color={color} label={deliveryLabels[stage.status]} size="small" sx={{ alignSelf: "flex-start" }} />
+      <Typography variant="body2">Попыток: {stage.attempt_count}</Typography>
+      <Typography color="text.secondary" variant="caption">
+        {stage.sent_at ? `Отправлено: ${formatDateTime(stage.sent_at)}` : `Запланировано: ${formatDateTime(stage.scheduled_at)}`}
+      </Typography>
+      {stage.last_error ? <Typography color="error" sx={{ overflowWrap: "anywhere" }} variant="caption">Последняя ошибка: {stage.last_error}</Typography> : null}
+      {stage.status === "failed" ? (
+        <Button disabled={!stage.can_retry || retryingId !== null} onClick={() => onRetry(stage.id)} size="small" startIcon={<RestartAltIcon />} sx={{ alignSelf: "flex-start" }}>
+          {retryingId === stage.id ? "Ставим в очередь…" : "Повторить"}
+        </Button>
+      ) : null}
+      {stage.status === "failed" && !stage.can_retry ? <Typography color="text.secondary" variant="caption">Дедлайн уже прошёл</Typography> : null}
     </Stack>
   );
 }

@@ -1,0 +1,10 @@
+[Unit]
+Description=Monitor VK Tutors Bot
+
+[Timer]
+OnBootSec=2m
+OnUnitActiveSec=2m
+Unit=vk-tutors-monitor.service
+
+[Install]
+WantedBy=timers.target

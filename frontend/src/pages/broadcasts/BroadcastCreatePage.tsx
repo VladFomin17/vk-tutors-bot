@@ -114,7 +114,7 @@ export function BroadcastCreatePage() {
                   <FormControl>
                     <FormLabel>Что считать подтверждением</FormLabel>
                     <RadioGroup onChange={(event) => setConfirmationType(event.target.value as ConfirmationType)} value={confirmationType}>
-                      <FormControlLabel control={<Radio />} label="Любое сообщение" value="any_message" />
+                      <FormControlLabel control={<Radio />} label="Реакция или любое сообщение" value="any_message" />
                       <FormControlLabel control={<Radio />} label="Изображение" value="image" />
                     </RadioGroup>
                   </FormControl>
@@ -170,7 +170,7 @@ export function BroadcastCreatePage() {
                   {link ? <Typography color="primary" sx={{ mt: 1, overflowWrap: "anywhere" }}>{link}</Typography> : null}
                   <Divider sx={{ my: 2 }} />
                   <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
-                    <Chip label={confirmationType === "image" ? "Нужно изображение" : "Подойдёт любое сообщение"} size="small" />
+                    <Chip label={confirmationType === "image" ? "Нужно изображение" : "Подойдёт реакция или сообщение"} size="small" />
                     <Chip label={`${selectedGroups.length} групп`} size="small" variant="outlined" />
                   </Stack>
                 </Box>

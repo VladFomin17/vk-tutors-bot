@@ -1,6 +1,14 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   postgres:
     image: postgres:17-alpine
+    restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-vk_tutors}
       POSTGRES_USER: ${POSTGRES_USER:-vk_tutors}
@@ -15,8 +23,9 @@ services:
 
   migrate:
     build: ./backend
+    logging: *default-logging
     command: ["alembic", "upgrade", "head"]
-    env_file: .env
+    env_file: ${ENV_FILE:-.env}
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://vk_tutors:vk_tutors@postgres:5432/vk_tutors}
     depends_on:
@@ -26,7 +35,9 @@ services:
 
   api:
     build: ./backend
-    env_file: .env
+    restart: unless-stopped
+    logging: *default-logging
+    env_file: ${ENV_FILE:-.env}
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://vk_tutors:vk_tutors@postgres:5432/vk_tutors}
     depends_on:
@@ -49,7 +60,8 @@ services:
   vk-listener:
     build: ./backend
     command: ["python", "-m", "app.integrations.vk.listener"]
-    env_file: .env
+    logging: *default-logging
+    env_file: ${ENV_FILE:-.env}
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://vk_tutors:vk_tutors@postgres:5432/vk_tutors}
     depends_on:
@@ -62,7 +74,8 @@ services:
   worker:
     build: ./backend
     command: ["python", "-m", "app.scheduler.worker"]
-    env_file: .env
+    logging: *default-logging
+    env_file: ${ENV_FILE:-.env}
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://vk_tutors:vk_tutors@postgres:5432/vk_tutors}
     depends_on:
@@ -72,8 +85,15 @@ services:
 
   frontend:
     build: ./frontend
+    restart: unless-stopped
+    logging: *default-logging
     ports:
       - "${APP_PORT:-80}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     depends_on:
       api:
         condition: service_healthy

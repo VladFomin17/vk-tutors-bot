@@ -19,7 +19,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     await engine.dispose()
 
 
-app = FastAPI(title="VK Tutors Bot API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="VK Tutors Bot API", version="1.0.0", lifespan=lifespan)
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(analytics_router, prefix="/api/v1")
 app.include_router(broadcasts_router, prefix="/api/v1")

@@ -1,4 +1,6 @@
-from sqlalchemy import select, update
+from datetime import datetime
+
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 
@@ -15,9 +17,44 @@ class DirectoryConflictError(RuntimeError):
 
 
 async def list_study_groups() -> list[dict[str, object]]:
+    student_count = (
+        select(func.count(ChatMember.vk_user_id))
+        .join(VkChat, VkChat.id == ChatMember.chat_id)
+        .where(
+            VkChat.study_group_id == StudyGroup.id,
+            ChatMember.role == "student",
+            ChatMember.is_active.is_(True),
+        )
+        .correlate(StudyGroup)
+        .scalar_subquery()
+    )
+    unknown_count = (
+        select(func.count(ChatMember.vk_user_id))
+        .join(VkChat, VkChat.id == ChatMember.chat_id)
+        .where(
+            VkChat.study_group_id == StudyGroup.id,
+            ChatMember.role == "unknown",
+            ChatMember.is_active.is_(True),
+        )
+        .correlate(StudyGroup)
+        .scalar_subquery()
+    )
+    last_activity_at = (
+        select(func.max(VkChat.last_activity_at))
+        .where(VkChat.study_group_id == StudyGroup.id)
+        .correlate(StudyGroup)
+        .scalar_subquery()
+    )
     async with session_factory() as session:
         rows = await session.execute(
-            select(StudyGroup.id, StudyGroup.name, StudyGroup.is_active).order_by(StudyGroup.name)
+            select(
+                StudyGroup.id,
+                StudyGroup.name,
+                StudyGroup.is_active,
+                student_count.label("student_count"),
+                unknown_count.label("unknown_count"),
+                last_activity_at.label("last_activity_at"),
+            ).order_by(StudyGroup.name)
         )
         return [dict(row) for row in rows.mappings()]
 
@@ -57,6 +94,21 @@ async def list_chats_missing_titles() -> list[int]:
             select(VkChat.peer_id).where(VkChat.title.is_(None), VkChat.is_active.is_(True))
         )
         return list(rows)
+
+
+async def mark_chat_activity(peer_id: int, occurred_at: datetime) -> None:
+    async with session_factory.begin() as session:
+        await session.execute(
+            update(VkChat)
+            .where(
+                VkChat.peer_id == peer_id,
+                or_(
+                    VkChat.last_activity_at.is_(None),
+                    VkChat.last_activity_at < occurred_at,
+                ),
+            )
+            .values(last_activity_at=occurred_at)
+        )
 
 
 async def link_chat(chat_id: int, study_group_id: int | None) -> dict[str, object]:

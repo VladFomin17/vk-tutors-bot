@@ -80,6 +80,27 @@ export function OverviewPage() {
           </SectionCard>
         </Grid>
       </Grid>
+
+      <SectionCard title="Последние принятые ответы">
+        {statisticsPending ? <LinearProgress /> : null}
+        {!statisticsPending && (statistics?.recent_responses.length ?? 0) === 0 ? <EmptyState title="Принятых ответов пока нет" /> : (
+          <TableContainer>
+            <Table aria-label="Последние принятые ответы">
+              <TableHead><TableRow><TableCell>Студент</TableCell><TableCell>Группа</TableCell><TableCell>Рассылка</TableCell><TableCell>Принят</TableCell></TableRow></TableHead>
+              <TableBody>
+                {statistics?.recent_responses.map((response) => (
+                  <TableRow hover key={response.id}>
+                    <TableCell>{`${response.last_name} ${response.first_name}`}</TableCell>
+                    <TableCell>{response.study_group_name}</TableCell>
+                    <TableCell><Link style={{ color: "inherit", fontWeight: 600, textDecoration: "none" }} to={`/broadcasts/${response.broadcast_id}/show`}>{response.broadcast_title}</Link></TableCell>
+                    <TableCell>{formatDateTime(response.responded_at)}{response.is_late ? " · после дедлайна" : ""}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </SectionCard>
     </Stack>
   );
 }

@@ -82,6 +82,32 @@ async def get_statistics() -> dict[str, object]:
                 BroadcastResponse.responded_at < tomorrow_start,
             )
         )
+        recent_response_rows = list(
+            (
+                await session.execute(
+                    select(
+                        BroadcastResponse.id,
+                        Broadcast.id.label("broadcast_id"),
+                        Broadcast.title.label("broadcast_title"),
+                        StudyGroup.name.label("study_group_name"),
+                        VkUser.vk_user_id,
+                        VkUser.first_name,
+                        VkUser.last_name,
+                        BroadcastResponse.responded_at,
+                        BroadcastResponse.is_late,
+                    )
+                    .join(
+                        BroadcastTarget,
+                        BroadcastTarget.id == BroadcastResponse.target_id,
+                    )
+                    .join(Broadcast, Broadcast.id == BroadcastTarget.broadcast_id)
+                    .join(StudyGroup, StudyGroup.id == BroadcastTarget.study_group_id)
+                    .join(VkUser, VkUser.vk_user_id == BroadcastResponse.vk_user_id)
+                    .order_by(BroadcastResponse.responded_at.desc())
+                    .limit(5)
+                )
+            ).mappings()
+        )
 
         response_day = cast(
             func.timezone("Europe/Moscow", BroadcastResponse.responded_at),
@@ -185,4 +211,5 @@ async def get_statistics() -> dict[str, object]:
         ],
         "broadcast_completion": [dict(row) for row in broadcast_rows],
         "group_activity": [dict(row) for row in group_rows],
+        "recent_responses": [dict(row) for row in recent_response_rows],
     }

@@ -1,0 +1,17 @@
+[Unit]
+Description=VK Tutors Bot
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/vk-tutors-bot
+Environment=ENV_FILE=.env.production
+ExecStart=/usr/bin/docker compose --env-file .env.production -f compose.yaml -f compose.prod.yaml up -d --remove-orphans
+ExecStop=/usr/bin/docker compose --env-file .env.production -f compose.yaml -f compose.prod.yaml down
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

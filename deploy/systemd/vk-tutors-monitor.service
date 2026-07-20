@@ -1,0 +1,9 @@
+[Unit]
+Description=Check VK Tutors Bot health
+After=docker.service vk-tutors.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/vk-tutors-bot
+EnvironmentFile=/opt/vk-tutors-bot/.env.production
+ExecStart=/opt/vk-tutors-bot/deploy/monitor.sh

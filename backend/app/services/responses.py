@@ -50,9 +50,14 @@ async def record_confirmation(
     responded_at: datetime,
     text: str,
     attachments: list[dict[str, object]],
-    broadcast_token: str,
+    broadcast_token: str | None,
 ) -> ConfirmationResult:
     async with session_factory.begin() as session:
+        outbound_filter = (
+            OutboundMessage.broadcast_token == broadcast_token
+            if broadcast_token is not None
+            else OutboundMessage.conversation_message_id == conversation_message_id
+        )
         destination = (
             await session.execute(
                 select(
@@ -72,7 +77,7 @@ async def record_confirmation(
                     ),
                 )
                 .where(
-                    OutboundMessage.broadcast_token == broadcast_token,
+                    outbound_filter,
                     VkChat.peer_id == peer_id,
                 )
             )

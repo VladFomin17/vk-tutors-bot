@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -14,16 +15,22 @@ from app.integrations.vk.client import (
     VkClient,
     build_client,
 )
-from app.integrations.vk.confirmations import parse_confirmation
+from app.integrations.vk.confirmations import parse_confirmation, parse_outbound_message
 from app.integrations.vk.media import store_images
-from app.services.chat_directory import list_chats_missing_titles, needs_sync, sync_chat
+from app.services.chat_directory import (
+    list_chats_missing_titles,
+    mark_chat_activity,
+    needs_sync,
+    sync_chat,
+)
 from app.services.media import MediaJob, list_missing_media_jobs, remove_files, replace_response_media
+from app.services.outbox import remember_delivery
 from app.services.responses import record_confirmation
 
 logger = logging.getLogger(__name__)
 
 
-def parse_chat_message(update: dict[str, Any]) -> tuple[int, int] | None:
+def parse_chat_message(update: dict[str, Any]) -> tuple[int, int, datetime] | None:
     if update.get("type") != "message_new":
         return None
     event_object = update.get("object")
@@ -34,11 +41,16 @@ def parse_chat_message(update: dict[str, Any]) -> tuple[int, int] | None:
         return None
     peer_id = message.get("peer_id")
     from_id = message.get("from_id")
+    timestamp = message.get("date")
     if not isinstance(peer_id, int) or peer_id < 2_000_000_000:
         return None
-    if not isinstance(from_id, int):
+    if not isinstance(from_id, int) or not isinstance(timestamp, int) or timestamp <= 0:
         return None
-    return peer_id, from_id
+    try:
+        occurred_at = datetime.fromtimestamp(timestamp, UTC)
+    except (OverflowError, OSError, ValueError):
+        return None
+    return peer_id, from_id, occurred_at
 
 
 async def sync_reference(client: VkClient, reference: ChatReference) -> None:
@@ -53,14 +65,21 @@ async def sync_reference(client: VkClient, reference: ChatReference) -> None:
 
 
 async def handle_update(client: VkClient, update: dict[str, Any]) -> None:
-    message = parse_chat_message(update)
-    if message is None:
+    outbound_message = parse_outbound_message(update, client.group_id)
+    if outbound_message is not None:
+        await remember_delivery(**vars(outbound_message))
         return
-    peer_id, from_id = message
-    if await needs_sync(peer_id, from_id):
-        await sync_reference(client, ChatReference(peer_id, None))
+
+    message = parse_chat_message(update)
+    if message is not None:
+        peer_id, from_id, occurred_at = message
+        if await needs_sync(peer_id, from_id):
+            await sync_reference(client, ChatReference(peer_id, None))
+        await mark_chat_activity(peer_id, occurred_at)
     confirmation = parse_confirmation(update, client.group_id)
     if confirmation is not None:
+        if message is None:
+            await mark_chat_activity(confirmation.peer_id, confirmation.responded_at)
         result = await record_confirmation(**vars(confirmation))
         settings = get_settings()
         remove_files(settings.media_root, list(result.obsolete_storage_names))

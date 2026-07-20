@@ -29,6 +29,7 @@ class VkChat(Base):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     discovered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     study_group: Mapped[StudyGroup | None] = relationship(back_populates="chat")
     members: Mapped[list["ChatMember"]] = relationship(

@@ -44,6 +44,9 @@ async def process_due_messages(client: VkClient, settings: Settings) -> None:
 async def run() -> None:
     settings = get_settings()
     client = build_client(settings)
+    recovered = await outbox.recover_interrupted()
+    if recovered:
+        logger.info("Recovered %s interrupted outbox messages", recovered)
     stop_event = asyncio.Event()
     loop = asyncio.get_running_loop()
     for shutdown_signal in (signal.SIGINT, signal.SIGTERM):

@@ -2,6 +2,9 @@ export type StudyGroup = {
   id: number;
   name: string;
   is_active: boolean;
+  student_count: number;
+  unknown_count: number;
+  last_activity_at: string | null;
 };
 
 export type VkChat = {
@@ -56,6 +59,28 @@ export type BroadcastResult = {
   is_late: boolean | null;
 };
 
+export type DeliveryStatus = "pending" | "processing" | "sent" | "failed" | "cancelled";
+
+export type DeliveryStage = {
+  id: number;
+  kind: "initial" | "reminder";
+  status: DeliveryStatus;
+  attempt_count: number;
+  scheduled_at: string;
+  sent_at: string | null;
+  last_error: string | null;
+  can_retry: boolean;
+};
+
+export type BroadcastDelivery = {
+  id: number;
+  study_group_name: string;
+  chat_title: string | null;
+  peer_id: number;
+  initial: DeliveryStage;
+  reminder: DeliveryStage | null;
+};
+
 export type Student = {
   id: string;
   chat_id: number;
@@ -93,5 +118,16 @@ export type Statistics = {
     student_count: number;
     recipient_count: number;
     response_count: number;
+  }>;
+  recent_responses: Array<{
+    id: number;
+    broadcast_id: number;
+    broadcast_title: string;
+    study_group_name: string;
+    vk_user_id: number;
+    first_name: string;
+    last_name: string;
+    responded_at: string;
+    is_late: boolean;
   }>;
 };

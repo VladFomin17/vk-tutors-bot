@@ -52,11 +52,24 @@ class GroupActivity(BaseModel):
     response_count: int
 
 
+class RecentResponse(BaseModel):
+    id: int
+    broadcast_id: int
+    broadcast_title: str
+    study_group_name: str
+    vk_user_id: int
+    first_name: str
+    last_name: str
+    responded_at: datetime
+    is_late: bool
+
+
 class StatisticsResponse(BaseModel):
     overview: StatisticsOverview
     responses_over_time: list[DailyResponseCount]
     broadcast_completion: list[BroadcastCompletion]
     group_activity: list[GroupActivity]
+    recent_responses: list[RecentResponse]
 
 
 @router.get("/students", response_model=list[StudentResponse])

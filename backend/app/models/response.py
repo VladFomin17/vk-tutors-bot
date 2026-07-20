@@ -22,11 +22,6 @@ class BroadcastResponse(Base):
     __tablename__ = "broadcast_responses"
     __table_args__ = (
         UniqueConstraint("target_id", "vk_user_id", name="uq_broadcast_responses_recipient"),
-        UniqueConstraint(
-            "peer_id",
-            "conversation_message_id",
-            name="uq_broadcast_responses_vk_message",
-        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)

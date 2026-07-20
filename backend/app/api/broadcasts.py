@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.services import broadcasts
 from app.services import exports
 from app.services import media
+from app.services import outbox
 from app.services import responses
 from app.services.auth import require_admin
 
@@ -84,6 +85,26 @@ class BroadcastResultResponse(BaseModel):
     media: list[ResponseMediaResponse]
 
 
+class DeliveryStageResponse(BaseModel):
+    id: int
+    kind: Literal["initial", "reminder"]
+    status: Literal["pending", "processing", "sent", "failed", "cancelled"]
+    attempt_count: int
+    scheduled_at: datetime
+    sent_at: datetime | None
+    last_error: str | None
+    can_retry: bool
+
+
+class BroadcastDeliveryResponse(BaseModel):
+    id: int
+    study_group_name: str
+    chat_title: str | None
+    peer_id: int
+    initial: DeliveryStageResponse
+    reminder: DeliveryStageResponse | None
+
+
 @router.get("/broadcasts", response_model=list[BroadcastSummaryResponse])
 async def get_broadcasts() -> list[dict[str, object]]:
     return await broadcasts.list_broadcasts()
@@ -107,6 +128,35 @@ async def get_broadcast_results(broadcast_id: int) -> list[dict[str, object]]:
         return await responses.list_results(broadcast_id)
     except responses.BroadcastNotFoundError as error:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
+
+
+@router.get(
+    "/broadcasts/{broadcast_id}/deliveries",
+    response_model=list[BroadcastDeliveryResponse],
+)
+async def get_broadcast_deliveries(broadcast_id: int) -> list[dict[str, object]]:
+    try:
+        return await outbox.list_deliveries(broadcast_id)
+    except outbox.OutboundNotFoundError as error:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
+
+
+@router.post(
+    "/broadcasts/{broadcast_id}/deliveries/{outbound_id}/retry",
+    response_model=DeliveryStageResponse,
+)
+async def retry_broadcast_delivery(
+    broadcast_id: int,
+    outbound_id: int,
+) -> dict[str, object]:
+    try:
+        delivery = await outbox.retry_failed(broadcast_id, outbound_id)
+    except outbox.OutboundNotFoundError as error:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
+    except outbox.OutboundRetryConflictError as error:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
+    logger.info("Outbound message %s manually queued for retry", outbound_id)
+    return delivery
 
 
 @router.get("/response-media/{media_id}")

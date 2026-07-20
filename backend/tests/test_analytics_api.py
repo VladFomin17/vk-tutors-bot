@@ -57,6 +57,19 @@ def test_statistics_response_is_typed(monkeypatch: MonkeyPatch) -> None:
             "responses_over_time": [{"date": date(2026, 7, 14), "count": 1}],
             "broadcast_completion": [],
             "group_activity": [],
+            "recent_responses": [
+                {
+                    "id": 1,
+                    "broadcast_id": 2,
+                    "broadcast_title": "Опрос",
+                    "study_group_name": "ИВТ-101",
+                    "vk_user_id": 3,
+                    "first_name": "Иван",
+                    "last_name": "Иванов",
+                    "responded_at": "2026-07-20T12:00:00+00:00",
+                    "is_late": False,
+                }
+            ],
         }
 
     app.dependency_overrides[require_admin] = lambda: None
@@ -69,3 +82,4 @@ def test_statistics_response_is_typed(monkeypatch: MonkeyPatch) -> None:
 
     assert response.status_code == 200
     assert response.json()["overview"]["responses_today"] == 1
+    assert response.json()["recent_responses"][0]["broadcast_title"] == "Опрос"

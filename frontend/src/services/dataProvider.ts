@@ -13,6 +13,12 @@ async function api(path: string, init?: RequestInit) {
   return response.status === 204 ? undefined : response.json();
 }
 
+export function retryDelivery(broadcastId: number, outboundId: number) {
+  return api(`/broadcasts/${broadcastId}/deliveries/${outboundId}/retry`, {
+    method: "POST",
+  });
+}
+
 function unsupported(): never {
   throw new Error("Operation is not supported");
 }
@@ -26,6 +32,8 @@ export const dataProvider: DataProvider = {
       path = "/broadcasts";
     } else if (resource === "broadcast_results" && params.filter.broadcast_id) {
       path = `/broadcasts/${params.filter.broadcast_id}/results`;
+    } else if (resource === "broadcast_deliveries" && params.filter.broadcast_id) {
+      path = `/broadcasts/${params.filter.broadcast_id}/deliveries`;
     } else if (resource === "vk_chats") {
       path = "/vk-chats";
     } else if (resource === "chat_members" && params.filter.chat_id) {
