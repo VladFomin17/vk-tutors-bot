@@ -1,21 +1,29 @@
 import secrets
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
+from app.core.config import get_settings
 from app.db.session import session_factory
 from app.models import (
     Broadcast,
     BroadcastRecipient,
+    BroadcastResponse,
     BroadcastTarget,
     ChatMember,
     OutboundMessage,
+    ResponseMedia,
     StudyGroup,
     VkChat,
 )
+from app.services.media import remove_files
 
 
 class BroadcastConflictError(RuntimeError):
+    pass
+
+
+class BroadcastDeleteConflictError(RuntimeError):
     pass
 
 
@@ -53,6 +61,49 @@ async def list_broadcasts() -> list[dict[str, object]]:
             ).order_by(Broadcast.created_at.desc())
         )
         return [dict(row) for row in rows.mappings()]
+
+
+async def delete_broadcast(broadcast_id: int) -> str | None:
+    target_ids = select(BroadcastTarget.id).where(
+        BroadcastTarget.broadcast_id == broadcast_id
+    )
+    async with session_factory.begin() as session:
+        broadcast = (
+            await session.execute(
+                select(Broadcast.title)
+                .where(Broadcast.id == broadcast_id)
+                .with_for_update()
+            )
+        ).one_or_none()
+        if broadcast is None:
+            return None
+
+        outbound_statuses = set(
+            await session.scalars(
+                select(OutboundMessage.status)
+                .where(OutboundMessage.target_id.in_(target_ids))
+                .with_for_update()
+            )
+        )
+        if "processing" in outbound_statuses:
+            raise BroadcastDeleteConflictError(
+                "Broadcast is being sent; retry deletion in a few seconds"
+            )
+
+        storage_names = list(
+            await session.scalars(
+                select(ResponseMedia.storage_name)
+                .join(BroadcastResponse, BroadcastResponse.id == ResponseMedia.response_id)
+                .where(BroadcastResponse.target_id.in_(target_ids))
+            )
+        )
+        await session.execute(
+            delete(BroadcastResponse).where(BroadcastResponse.target_id.in_(target_ids))
+        )
+        await session.execute(delete(Broadcast).where(Broadcast.id == broadcast_id))
+
+    remove_files(get_settings().media_root, storage_names)
+    return broadcast.title
 
 
 async def create_broadcast(

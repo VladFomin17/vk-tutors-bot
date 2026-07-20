@@ -11,6 +11,7 @@
 - Global student directory with group and activity filters.
 - Authenticated aggregate statistics API and lazy-loaded MUI charts.
 - Retryable frontend query errors and unsaved broadcast draft protection.
+- Direct header logout and permanent broadcast deletion with media cleanup.
 - Initial FastAPI, Alembic, PostgreSQL and React Admin scaffold.
 - Docker Compose development runtime.
 - VK API feasibility spike and architecture documentation.

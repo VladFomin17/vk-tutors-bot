@@ -70,3 +70,20 @@ def test_create_broadcast_rejects_duplicate_groups() -> None:
         app.dependency_overrides.clear()
 
     assert response.status_code == 422
+
+
+def test_delete_broadcast(monkeypatch: MonkeyPatch) -> None:
+    async def fake_delete(broadcast_id: int) -> str | None:
+        return "Опрос" if broadcast_id == 7 else None
+
+    app.dependency_overrides[require_admin] = lambda: None
+    monkeypatch.setattr(broadcasts.broadcasts, "delete_broadcast", fake_delete)
+    try:
+        with TestClient(app) as client:
+            deleted = client.delete("/api/v1/broadcasts/7")
+            missing = client.delete("/api/v1/broadcasts/8")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert deleted.status_code == 204
+    assert missing.status_code == 404

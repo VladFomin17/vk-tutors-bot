@@ -1,9 +1,13 @@
 from dataclasses import dataclass
+import logging
+from pathlib import Path
 
 from sqlalchemy import delete, select
 
 from app.db.session import session_factory
 from app.models import BroadcastResponse, ResponseMedia
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -84,3 +88,16 @@ async def get_media(media_id: int) -> dict[str, object] | None:
             )
         ).mappings().one_or_none()
         return dict(row) if row is not None else None
+
+
+def remove_files(root: Path, storage_names: list[str]) -> None:
+    resolved_root = root.resolve()
+    for storage_name in storage_names:
+        path = (resolved_root / storage_name).resolve()
+        if not path.is_relative_to(resolved_root):
+            logger.error("Refused to remove image outside media root: %s", storage_name)
+            continue
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            logger.warning("Failed to remove stored image %s", storage_name, exc_info=True)

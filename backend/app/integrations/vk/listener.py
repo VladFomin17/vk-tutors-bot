@@ -15,9 +15,9 @@ from app.integrations.vk.client import (
     build_client,
 )
 from app.integrations.vk.confirmations import parse_confirmation
-from app.integrations.vk.media import remove_files, store_images
+from app.integrations.vk.media import store_images
 from app.services.chat_directory import list_chats_missing_titles, needs_sync, sync_chat
-from app.services.media import MediaJob, list_missing_media_jobs, replace_response_media
+from app.services.media import MediaJob, list_missing_media_jobs, remove_files, replace_response_media
 from app.services.responses import record_confirmation
 
 logger = logging.getLogger(__name__)

@@ -1,9 +1,16 @@
-import AddIcon from "@mui/icons-material/Add";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import {
   Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   FormControl,
   IconButton,
   InputAdornment,
@@ -25,7 +32,7 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { useMemo, useState, type MouseEvent } from "react";
-import { Title, useGetList } from "react-admin";
+import { Title, useDelete, useGetList, useNotify } from "react-admin";
 import { Link } from "react-router-dom";
 
 import { EmptyState } from "../../components/EmptyState";
@@ -39,24 +46,42 @@ import { formatDateTime } from "../../utils/date";
 type StatusFilter = "all" | "active" | "completed";
 
 export function BroadcastListPage() {
+  const notify = useNotify();
   const { data = [], isPending, error, refetch } = useGetList<Broadcast>("broadcasts");
+  const [deleteBroadcast, { isPending: isDeleting }] = useDelete();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [sort, setSort] = useState<BroadcastSort>("created_desc");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [broadcastToDelete, setBroadcastToDelete] = useState<Broadcast | null>(null);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("ru-RU");
     const rows = data.filter((broadcast) => {
-        const completed = isBroadcastCompleted(broadcast.deadline);
-        const matchesStatus = status === "all" || (status === "completed") === completed;
-        return matchesStatus && broadcast.title.toLocaleLowerCase("ru-RU").includes(query);
-      });
+      const completed = isBroadcastCompleted(broadcast.deadline);
+      const matchesStatus = status === "all" || (status === "completed") === completed;
+      return matchesStatus && broadcast.title.toLocaleLowerCase("ru-RU").includes(query);
+    });
     return sortBroadcasts(rows, sort);
   }, [data, search, sort, status]);
 
   const visibleRows = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+  function confirmDelete() {
+    if (broadcastToDelete === null) return;
+    deleteBroadcast(
+      "broadcasts",
+      { id: broadcastToDelete.id, previousData: broadcastToDelete },
+      {
+        onSuccess: () => {
+          setBroadcastToDelete(null);
+          notify("Рассылка и связанные данные удалены", { type: "success" });
+        },
+        onError: (error) => notify(error instanceof Error ? error.message : "Не удалось удалить рассылку", { type: "error" }),
+      },
+    );
+  }
 
   return (
     <Stack spacing={3}>
@@ -64,7 +89,6 @@ export function BroadcastListPage() {
       <PageHeader
         title="Рассылки"
         description="Создание, контроль ответов и экспорт результатов."
-        action={{ label: "Создать рассылку", to: "/broadcasts/create", icon: <AddIcon /> }}
       />
       {error ? <QueryErrorState message="Не удалось загрузить рассылки." onRetry={refetch} /> : null}
       <Paper variant="outlined">
@@ -138,7 +162,7 @@ export function BroadcastListPage() {
                       <TableCell>{formatDateTime(broadcast.deadline)}</TableCell>
                       <TableCell align="right">{broadcast.target_count}</TableCell>
                       <TableCell align="right">{broadcast.recipient_count}</TableCell>
-                      <TableCell align="right"><BroadcastActions broadcastId={broadcast.id} /></TableCell>
+                      <TableCell align="right"><BroadcastActions broadcast={broadcast} onDelete={setBroadcastToDelete} /></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -160,11 +184,25 @@ export function BroadcastListPage() {
           </>
         )}
       </Paper>
+      <Dialog onClose={() => !isDeleting && setBroadcastToDelete(null)} open={broadcastToDelete !== null}>
+        <DialogTitle>Удалить рассылку?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            «{broadcastToDelete?.title}» будет удалена вместе с результатами, заданиями и сохранёнными изображениями. Уже отправленные сообщения останутся в VK.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={isDeleting} onClick={() => setBroadcastToDelete(null)}>Отмена</Button>
+          <Button color="error" disabled={isDeleting} onClick={confirmDelete} startIcon={isDeleting ? <CircularProgress color="inherit" size={18} /> : <DeleteOutlineIcon />}>
+            Удалить
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }
 
-function BroadcastActions({ broadcastId }: { broadcastId: number }) {
+function BroadcastActions({ broadcast, onDelete }: { broadcast: Broadcast; onDelete: (broadcast: Broadcast) => void }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const close = () => setAnchor(null);
   const open = (event: MouseEvent<HTMLElement>) => setAnchor(event.currentTarget);
@@ -174,14 +212,17 @@ function BroadcastActions({ broadcastId }: { broadcastId: number }) {
         <IconButton aria-label="Действия с рассылкой" onClick={open} size="small"><MoreHorizIcon /></IconButton>
       </Tooltip>
       <Menu anchorEl={anchor} onClose={close} open={Boolean(anchor)}>
-        <MenuItem component={Link} onClick={close} to={`/broadcasts/${broadcastId}/show`}>
+        <MenuItem component={Link} onClick={close} to={`/broadcasts/${broadcast.id}/show`}>
           <VisibilityOutlinedIcon fontSize="small" sx={{ mr: 1.5 }} /> Результаты
         </MenuItem>
-        <MenuItem component="a" href={`/api/v1/broadcasts/${broadcastId}/export.xlsx`} onClick={close}>
+        <MenuItem component="a" href={`/api/v1/broadcasts/${broadcast.id}/export.xlsx`} onClick={close}>
           <DownloadOutlinedIcon fontSize="small" sx={{ mr: 1.5 }} /> Скачать XLSX
         </MenuItem>
-        <MenuItem component="a" href={`/api/v1/broadcasts/${broadcastId}/export.docx`} onClick={close}>
+        <MenuItem component="a" href={`/api/v1/broadcasts/${broadcast.id}/export.docx`} onClick={close}>
           <DownloadOutlinedIcon fontSize="small" sx={{ mr: 1.5 }} /> Скачать DOCX
+        </MenuItem>
+        <MenuItem onClick={() => { close(); onDelete(broadcast); }} sx={{ color: "error.main" }}>
+          <DeleteOutlineIcon fontSize="small" sx={{ mr: 1.5 }} /> Удалить
         </MenuItem>
       </Menu>
     </>

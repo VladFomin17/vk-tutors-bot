@@ -3,6 +3,7 @@ import CampaignOutlinedIcon from "@mui/icons-material/CampaignOutlined";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
+import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import { Box, Button } from "@mui/material";
 import {
@@ -11,13 +12,14 @@ import {
   type LayoutProps,
   Menu,
   TitlePortal,
-  UserMenu,
+  useLogout,
 } from "react-admin";
 import { Link } from "react-router-dom";
 
 function AdminAppBar() {
+  const logout = useLogout();
   return (
-    <AppBar color="inherit" elevation={0} sx={{ borderBottom: 1, borderColor: "divider" }}>
+    <AppBar color="inherit" elevation={0} sx={{ borderBottom: 1, borderColor: "divider" }} userMenu={false}>
       <TitlePortal />
       <Box sx={{ flex: 1 }} />
       <Button
@@ -29,7 +31,9 @@ function AdminAppBar() {
       >
         Создать рассылку
       </Button>
-      <UserMenu />
+      <Button color="inherit" onClick={() => void logout()} startIcon={<LogoutOutlinedIcon />}>
+        Выйти
+      </Button>
     </AppBar>
   );
 }

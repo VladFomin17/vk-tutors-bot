@@ -45,7 +45,7 @@ export function OverviewPage() {
   return (
     <Stack spacing={3}>
       <Title title="Обзор" />
-      <PageHeader title="Обзор" description="Состояние рассылок и подключённых учебных групп." action={{ label: "Создать рассылку", to: "/broadcasts/create" }} />
+      <PageHeader title="Обзор" description="Состояние рассылок и подключённых учебных групп." />
       {chatsError || broadcastsError || statisticsError ? <QueryErrorState message="Не удалось полностью загрузить обзор." onRetry={() => Promise.all([refetchChats(), refetchBroadcasts(), refetchStatistics()])} /> : null}
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, xl: 2.4 }}><StatCard icon={<GroupsOutlinedIcon />} label="Учебные группы" loading={statisticsPending} value={statistics?.overview.total_groups ?? 0} /></Grid>

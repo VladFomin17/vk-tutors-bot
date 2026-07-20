@@ -1,14 +1,11 @@
-import { Box, Button, Stack, Typography } from "@mui/material";
-import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Box, Stack, Typography } from "@mui/material";
 
 type PageHeaderProps = {
   title: string;
   description?: string;
-  action?: { label: string; to: string; icon?: ReactNode };
 };
 
-export function PageHeader({ title, description, action }: PageHeaderProps) {
+export function PageHeader({ title, description }: PageHeaderProps) {
   return (
     <Box component="header">
     <Stack
@@ -26,11 +23,6 @@ export function PageHeader({ title, description, action }: PageHeaderProps) {
           </Typography>
         ) : null}
       </Box>
-      {action ? (
-        <Button component={Link} to={action.to} variant="contained" startIcon={action.icon}>
-          {action.label}
-        </Button>
-      ) : null}
     </Stack>
     </Box>
   );

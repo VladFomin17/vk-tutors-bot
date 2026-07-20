@@ -3,7 +3,7 @@ from datetime import datetime
 from io import BytesIO
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 from starlette.responses import FileResponse, StreamingResponse
 
@@ -87,6 +87,18 @@ class BroadcastResultResponse(BaseModel):
 @router.get("/broadcasts", response_model=list[BroadcastSummaryResponse])
 async def get_broadcasts() -> list[dict[str, object]]:
     return await broadcasts.list_broadcasts()
+
+
+@router.delete("/broadcasts/{broadcast_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_broadcast(broadcast_id: int) -> Response:
+    try:
+        title = await broadcasts.delete_broadcast(broadcast_id)
+    except broadcasts.BroadcastDeleteConflictError as error:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
+    if title is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Broadcast not found")
+    logger.info("Broadcast %s deleted", broadcast_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/broadcasts/{broadcast_id}/results", response_model=list[BroadcastResultResponse])

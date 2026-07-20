@@ -1,15 +1,13 @@
 import asyncio
-import logging
 import os
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-from app.services.media import MediaFile, MediaJob
+from app.services.media import MediaFile, MediaJob, remove_files
 
 ALLOWED_HOST_SUFFIXES = (".userapi.com", ".vkuserphoto.ru")
-logger = logging.getLogger(__name__)
 
 
 class MediaDownloadError(OSError):
@@ -44,19 +42,6 @@ async def store_images(
     except OSError:
         remove_files(root, [file.storage_name for file in stored])
         raise
-
-
-def remove_files(root: Path, storage_names: list[str]) -> None:
-    resolved_root = root.resolve()
-    for storage_name in storage_names:
-        path = (resolved_root / storage_name).resolve()
-        if not path.is_relative_to(resolved_root):
-            logger.error("Refused to remove image outside media root: %s", storage_name)
-            continue
-        try:
-            path.unlink(missing_ok=True)
-        except OSError:
-            logger.warning("Failed to remove stored image %s", storage_name, exc_info=True)
 
 
 def _photo_urls(attachments: list[dict[str, object]]) -> list[str]:

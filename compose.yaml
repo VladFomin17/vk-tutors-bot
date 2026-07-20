@@ -44,7 +44,7 @@ services:
       timeout: 5s
       retries: 10
     volumes:
-      - media_data:/data/media:ro
+      - media_data:/data/media
 
   vk-listener:
     build: ./backend

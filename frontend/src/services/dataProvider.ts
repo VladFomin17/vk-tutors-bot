@@ -1,4 +1,4 @@
-import { HttpError, type DataProvider } from "react-admin";
+import { HttpError, type DataProvider, type DeleteParams, type DeleteResult, type RaRecord } from "react-admin";
 
 async function api(path: string, init?: RequestInit) {
   const response = await fetch(`/api/v1${path}`, {
@@ -73,6 +73,12 @@ export const dataProvider: DataProvider = {
   getMany: async () => unsupported(),
   getManyReference: async () => unsupported(),
   updateMany: async () => unsupported(),
-  delete: async () => unsupported(),
+  delete: async <RecordType extends RaRecord>(resource: string, params: DeleteParams<RecordType>): Promise<DeleteResult<RecordType>> => {
+    if (resource !== "broadcasts") {
+      return unsupported();
+    }
+    await api(`/broadcasts/${params.id}`, { method: "DELETE" });
+    return { data: params.previousData ?? ({ id: params.id } as RecordType) };
+  },
   deleteMany: async () => unsupported(),
 };
