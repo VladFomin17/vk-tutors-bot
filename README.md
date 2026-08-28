@@ -25,6 +25,7 @@ cd frontend && npm ci && npm test && npm run build
 ## Документация
 
 - [Production-развёртывание и эксплуатация](docs/production.md): домен, HTTPS, секреты, systemd, backup/restore, мониторинг и диагностика.
+- [Развёртывание по IP без домена](docs/ip-deployment.md): упрощённый запуск одной админ-панели через HTTP, Docker и Cloud.ru.
 - [Руководство администратора](docs/admin-guide.md): подключение VK-беседы, группы, участники, рассылки и результаты.
 - [Архитектура](docs/architecture.md) и [схема данных](docs/database.md).
 - [Проверка VK API](docs/vk-spike.md).
