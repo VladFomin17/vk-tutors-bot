@@ -50,12 +50,30 @@ class MemberRoleUpdate(BaseModel):
     role: MemberRole
 
 
+class VkUserNameUpdate(BaseModel):
+    full_name: str | None = Field(default=None, max_length=255)
+
+    @field_validator("full_name")
+    @classmethod
+    def normalize_full_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = " ".join(value.split())
+        return normalized or None
+
+
+class VkUserNameResponse(BaseModel):
+    vk_user_id: int
+    full_name: str | None
+
+
 class MemberResponse(BaseModel):
     id: str
     chat_id: int
     vk_user_id: int
     first_name: str | None = None
     last_name: str | None = None
+    full_name: str | None = None
     role: MemberRole
     is_active: bool
 
@@ -131,3 +149,16 @@ async def patch_member_role(
         raise translate_directory_error(error) from error
     logger.info("VK chat %s member role updated", chat_id)
     return member
+
+
+@router.patch("/vk-users/{vk_user_id}", response_model=VkUserNameResponse)
+async def patch_vk_user_name(
+    vk_user_id: int,
+    payload: VkUserNameUpdate,
+) -> dict[str, object]:
+    try:
+        user = await chat_directory.update_user_full_name(vk_user_id, payload.full_name)
+    except chat_directory.DirectoryNotFoundError as error:
+        raise translate_directory_error(error) from error
+    logger.info("VK user %s full name updated", vk_user_id)
+    return user

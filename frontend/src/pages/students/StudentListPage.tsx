@@ -16,10 +16,9 @@ import {
   TablePagination,
   TableRow,
   TextField,
-  Typography,
 } from "@mui/material";
 import { useMemo, useState } from "react";
-import { Title, useGetList } from "react-admin";
+import { Title, useGetList, useNotify, useUpdate } from "react-admin";
 
 import { EmptyState } from "../../components/EmptyState";
 import { PageHeader } from "../../components/PageHeader";
@@ -31,6 +30,8 @@ type ActivityFilter = "all" | "active" | "inactive";
 
 export function StudentListPage() {
   const { data = [], isPending, error, refetch } = useGetList<Student>("students");
+  const [update] = useUpdate();
+  const notify = useNotify();
   const [search, setSearch] = useState("");
   const [groupId, setGroupId] = useState("all");
   const [activity, setActivity] = useState<ActivityFilter>("active");
@@ -43,7 +44,7 @@ export function StudentListPage() {
   const filtered = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("ru-RU");
     return data.filter((student) => {
-      const identity = `${student.last_name} ${student.first_name} ${student.vk_user_id}`.toLocaleLowerCase("ru-RU");
+      const identity = `${student.full_name ?? ""} ${student.last_name} ${student.first_name} ${student.vk_user_id}`.toLocaleLowerCase("ru-RU");
       const matchesActivity = activity === "all" || (activity === "active") === student.is_active;
       return identity.includes(query) && matchesActivity && (groupId === "all" || student.study_group_id === Number(groupId));
     });
@@ -94,7 +95,24 @@ export function StudentListPage() {
                 <TableHead><TableRow><TableCell>Студент</TableCell><TableCell>Группа</TableCell><TableCell>VK ID</TableCell><TableCell>Состояние</TableCell><TableCell>Последняя синхронизация</TableCell></TableRow></TableHead>
                 <TableBody>{visible.map((student) => (
                   <TableRow hover key={student.id}>
-                    <TableCell><Typography sx={{ fontWeight: 600 }}>{student.last_name} {student.first_name}</Typography></TableCell>
+                    <TableCell>
+                      <TextField
+                        aria-label={`Настоящее ФИО пользователя ${student.vk_user_id}`}
+                        defaultValue={student.full_name ?? ""}
+                        helperText={`${student.last_name} ${student.first_name} — имя из VK`}
+                        onBlur={(event) => {
+                          const fullName = event.target.value.trim().replace(/\s+/g, " ") || null;
+                          if (fullName === student.full_name) return;
+                          update("students", { id: student.id, data: { ...student, full_name: fullName } }, {
+                            onSuccess: () => { student.full_name = fullName; notify("ФИО сохранено"); },
+                            onError: () => notify("Не удалось сохранить ФИО", { type: "error" }),
+                          });
+                        }}
+                        placeholder="Введите настоящее ФИО"
+                        size="small"
+                        sx={{ minWidth: 280 }}
+                      />
+                    </TableCell>
                     <TableCell>{student.study_group_name}</TableCell>
                     <TableCell>{student.vk_user_id}</TableCell>
                     <TableCell><Chip color={student.is_active ? "success" : "default"} label={student.is_active ? "В беседе" : "Вышел"} size="small" variant={student.is_active ? "filled" : "outlined"} /></TableCell>

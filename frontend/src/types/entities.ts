@@ -23,6 +23,7 @@ export type ChatMember = {
   vk_user_id: number;
   first_name: string | null;
   last_name: string | null;
+  full_name: string | null;
   role: MemberRole;
   is_active: boolean;
 };
@@ -87,6 +88,7 @@ export type Student = {
   vk_user_id: number;
   first_name: string;
   last_name: string;
+  full_name: string | null;
   is_active: boolean;
   first_seen_at: string;
   last_seen_at: string;

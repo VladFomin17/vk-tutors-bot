@@ -65,6 +65,9 @@ export const dataProvider: DataProvider = {
     } else if (resource === "chat_members") {
       path = `/vk-chats/${params.data.chat_id}/members/${params.data.vk_user_id}`;
       body = { role: params.data.role };
+    } else if (resource === "students") {
+      path = `/vk-users/${params.data.vk_user_id}`;
+      body = { full_name: params.data.full_name ?? null };
     } else {
       return unsupported();
     }

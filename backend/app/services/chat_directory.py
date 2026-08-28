@@ -152,6 +152,7 @@ async def list_members(chat_id: int) -> list[dict[str, object]]:
                 ChatMember.vk_user_id,
                 VkUser.first_name,
                 VkUser.last_name,
+                VkUser.full_name,
                 ChatMember.role,
                 ChatMember.is_active,
             )
@@ -186,6 +187,21 @@ async def update_member_role(chat_id: int, vk_user_id: int, role: str) -> dict[s
         if row is None:
             raise DirectoryNotFoundError("Chat member not found")
         return {**dict(row), "id": f"{row['chat_id']}:{row['vk_user_id']}"}
+
+
+async def update_user_full_name(vk_user_id: int, full_name: str | None) -> dict[str, object]:
+    async with session_factory.begin() as session:
+        row = (
+            await session.execute(
+                update(VkUser)
+                .where(VkUser.vk_user_id == vk_user_id)
+                .values(full_name=full_name)
+                .returning(VkUser.vk_user_id, VkUser.full_name)
+            )
+        ).mappings().one_or_none()
+        if row is None:
+            raise DirectoryNotFoundError("VK user not found")
+        return dict(row)
 
 
 async def needs_sync(peer_id: int, vk_user_id: int) -> bool:

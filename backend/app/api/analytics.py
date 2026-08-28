@@ -15,6 +15,7 @@ class StudentResponse(BaseModel):
     vk_user_id: int
     first_name: str
     last_name: str
+    full_name: str | None = None
     is_active: bool
     first_seen_at: datetime
     last_seen_at: datetime

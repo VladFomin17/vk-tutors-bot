@@ -26,6 +26,7 @@ async def list_students() -> list[dict[str, object]]:
                 ChatMember.vk_user_id,
                 VkUser.first_name,
                 VkUser.last_name,
+                VkUser.full_name,
                 ChatMember.is_active,
                 ChatMember.first_seen_at,
                 ChatMember.last_seen_at,

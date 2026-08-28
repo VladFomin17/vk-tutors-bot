@@ -48,7 +48,7 @@ export function GroupShowPage() {
 
   const filtered = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("ru-RU");
-    return members.filter((member) => `${member.last_name ?? ""} ${member.first_name ?? ""}`.toLocaleLowerCase("ru-RU").includes(query));
+    return members.filter((member) => `${member.full_name ?? ""} ${member.last_name ?? ""} ${member.first_name ?? ""}`.toLocaleLowerCase("ru-RU").includes(query));
   }, [members, search]);
 
   function updateRole(member: ChatMember, role: MemberRole) {
@@ -75,7 +75,7 @@ export function GroupShowPage() {
               <TableBody>
                 {filtered.map((member) => (
                   <TableRow hover key={member.id}>
-                    <TableCell sx={{ fontWeight: 600 }}>{`${member.last_name ?? ""} ${member.first_name ?? ""}`.trim() || `VK ID ${member.vk_user_id}`}</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{member.full_name || `${member.last_name ?? ""} ${member.first_name ?? ""}`.trim() || `VK ID ${member.vk_user_id}`}</TableCell>
                     <TableCell>{member.vk_user_id}</TableCell>
                     <TableCell><Chip color={member.is_active ? "success" : "default"} label={member.is_active ? "В беседе" : "Не в беседе"} size="small" variant="outlined" /></TableCell>
                     <TableCell>
