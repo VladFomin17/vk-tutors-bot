@@ -107,7 +107,11 @@ class VkClient:
         return payload["response"]
 
     async def list_chats(self) -> list[ChatReference]:
-        response = await self.api("messages.getConversations", count=200)
+        response = await self.api(
+            "messages.getConversations",
+            count=200,
+            group_id=self.group_id,
+        )
         if not isinstance(response, dict) or not isinstance(response.get("items"), list):
             raise VkApiError("VK conversations response is invalid")
 
@@ -121,7 +125,11 @@ class VkClient:
         return chats
 
     async def get_chat(self, peer_id: int) -> ChatReference:
-        response = await self.api("messages.getConversationsById", peer_ids=peer_id)
+        response = await self.api(
+            "messages.getConversationsById",
+            peer_ids=peer_id,
+            group_id=self.group_id,
+        )
         if not isinstance(response, dict) or not isinstance(response.get("items"), list):
             raise VkApiError("VK conversation response is invalid")
         for conversation in response["items"]:
@@ -131,7 +139,11 @@ class VkClient:
         raise VkApiError("VK conversation was not found")
 
     async def get_members(self, peer_id: int) -> list[tuple[int, str, str]]:
-        response = await self.api("messages.getConversationMembers", peer_id=peer_id)
+        response = await self.api(
+            "messages.getConversationMembers",
+            peer_id=peer_id,
+            group_id=self.group_id,
+        )
         if not isinstance(response, dict):
             raise VkApiError("VK members response is invalid")
         items = response.get("items")
