@@ -13,6 +13,10 @@ async function api(path: string, init?: RequestInit) {
   return response.status === 204 ? undefined : response.json();
 }
 
+export function syncVkChats(): Promise<{ synchronized_count: number }> {
+  return api("/vk-chats/sync", { method: "POST" });
+}
+
 export function retryDelivery(broadcastId: number, outboundId: number) {
   return api(`/broadcasts/${broadcastId}/deliveries/${outboundId}/retry`, {
     method: "POST",

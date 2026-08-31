@@ -5,6 +5,8 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 
+from app.integrations.vk.chat_sync import sync_available_chats
+from app.integrations.vk.client import VkApiError
 from app.services import chat_directory
 from app.services.auth import require_admin
 
@@ -44,6 +46,10 @@ class ChatResponse(BaseModel):
     title: str | None
     study_group_id: int | None
     is_active: bool
+
+
+class ChatSyncResponse(BaseModel):
+    synchronized_count: int
 
 
 class MemberRoleUpdate(BaseModel):
@@ -114,6 +120,20 @@ async def post_study_group(payload: StudyGroupCreate) -> dict[str, object]:
 @router.get("/vk-chats", response_model=list[ChatResponse])
 async def get_chats() -> list[dict[str, object]]:
     return await chat_directory.list_chats()
+
+
+@router.post("/vk-chats/sync", response_model=ChatSyncResponse)
+async def post_sync_chats() -> dict[str, int]:
+    try:
+        synchronized_count = await sync_available_chats()
+    except (RuntimeError, VkApiError) as error:
+        logger.exception("VK chat synchronization failed")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Не удалось синхронизировать беседы с VK",
+        ) from error
+    logger.info("VK chat synchronization completed: %s chats", synchronized_count)
+    return {"synchronized_count": synchronized_count}
 
 
 @router.patch("/vk-chats/{chat_id}", response_model=ChatResponse)

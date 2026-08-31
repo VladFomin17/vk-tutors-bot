@@ -71,3 +71,19 @@ def test_study_groups_include_activity_metrics(monkeypatch: MonkeyPatch) -> None
     assert response.status_code == 200
     assert response.json()[0]["student_count"] == 20
     assert response.json()[0]["unknown_count"] == 2
+
+
+def test_sync_chats_returns_synchronized_count(monkeypatch: MonkeyPatch) -> None:
+    async def fake_sync() -> int:
+        return 2
+
+    app.dependency_overrides[require_admin] = lambda: None
+    monkeypatch.setattr(directory, "sync_available_chats", fake_sync)
+    try:
+        with TestClient(app) as client:
+            response = client.post("/api/v1/vk-chats/sync")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == {"synchronized_count": 2}

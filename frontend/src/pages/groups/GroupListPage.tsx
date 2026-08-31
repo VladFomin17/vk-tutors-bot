@@ -1,5 +1,6 @@
 import AddIcon from "@mui/icons-material/Add";
 import PeopleOutlineIcon from "@mui/icons-material/PeopleOutlined";
+import SyncIcon from "@mui/icons-material/Sync";
 import {
   Button,
   Chip,
@@ -29,6 +30,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { PageHeader } from "../../components/PageHeader";
 import { QueryErrorState } from "../../components/QueryErrorState";
 import { SectionCard } from "../../components/SectionCard";
+import { syncVkChats } from "../../services/dataProvider";
 import type { StudyGroup, VkChat } from "../../types/entities";
 import { formatDateTime } from "../../utils/date";
 
@@ -39,6 +41,20 @@ export function GroupListPage() {
   const [createGroup, { isPending: isCreating }] = useCreate();
   const [updateChat] = useUpdate();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isSyncingChats, setIsSyncingChats] = useState(false);
+
+  async function syncChats() {
+    setIsSyncingChats(true);
+    try {
+      const { synchronized_count: synchronizedCount } = await syncVkChats();
+      await refetchChats();
+      notify(synchronizedCount === 0 ? "VK-беседы не найдены" : `Синхронизировано бесед: ${synchronizedCount}`, { type: "success" });
+    } catch {
+      notify("Не удалось синхронизировать беседы с VK", { type: "error" });
+    } finally {
+      setIsSyncingChats(false);
+    }
+  }
 
   function submitGroup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -96,9 +112,9 @@ export function GroupListPage() {
         )}
       </SectionCard>
 
-      <SectionCard title="Обнаруженные VK-беседы" description="Каждая беседа может быть связана только с одной группой.">
+      <SectionCard title="Обнаруженные VK-беседы" description="Каждая беседа может быть связана только с одной группой." action={<Button disabled={isSyncingChats} onClick={syncChats} startIcon={isSyncingChats ? <CircularProgress color="inherit" size={18} /> : <SyncIcon />} variant="outlined">Синхронизировать с VK</Button>}>
         {chatsPending ? <LinearProgress /> : null}
-        {!chatsPending && chats.length === 0 ? <EmptyState title="Беседы пока не обнаружены" description="Добавьте бота в беседу и отправьте в ней сообщение." /> : (
+        {!chatsPending && chats.length === 0 ? <EmptyState title="Беседы пока не обнаружены" description="Добавьте бота в беседу и нажмите «Синхронизировать с VK»." /> : (
           <TableContainer>
             <Table aria-label="VK-беседы">
               <TableHead><TableRow><TableCell>Название</TableCell><TableCell>Peer ID</TableCell><TableCell>Учебная группа</TableCell></TableRow></TableHead>
