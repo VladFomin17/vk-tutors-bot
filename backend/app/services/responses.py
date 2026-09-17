@@ -209,6 +209,7 @@ async def sync_reactions(client: VkClient, broadcast_id: int) -> dict[str, int]:
 
     targets = await outbox.list_reaction_targets(broadcast_id)
     checked_messages = 0
+    skipped_messages = 0
     found_reactions = 0
     recorded_responses = 0
     for target in targets:
@@ -220,10 +221,6 @@ async def sync_reactions(client: VkClient, broadcast_id: int) -> dict[str, int]:
         ):
             conversation_message_id = await client.get_message_conversation_id(
                 target["vk_message_id"]
-            )
-        if conversation_message_id is None:
-            conversation_message_id = await client.find_message_conversation_id(
-                target["peer_id"], target["broadcast_token"]
             )
         if isinstance(conversation_message_id, int):
             await outbox.remember_delivery(
@@ -237,6 +234,7 @@ async def sync_reactions(client: VkClient, broadcast_id: int) -> dict[str, int]:
                 broadcast_token=target["broadcast_token"],
             )
         if not isinstance(conversation_message_id, int):
+            skipped_messages += 1
             continue
 
         checked_messages += 1
@@ -260,6 +258,7 @@ async def sync_reactions(client: VkClient, broadcast_id: int) -> dict[str, int]:
 
     return {
         "checked_messages": checked_messages,
+        "skipped_messages": skipped_messages,
         "found_reactions": found_reactions,
         "recorded_responses": recorded_responses,
     }

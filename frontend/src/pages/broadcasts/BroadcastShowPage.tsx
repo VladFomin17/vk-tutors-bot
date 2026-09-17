@@ -87,7 +87,8 @@ export function BroadcastShowPage() {
     setSyncingReactions(true);
     try {
       const summary = await syncBroadcastReactions(broadcastId);
-      notify(`Проверено сообщений: ${summary.checked_messages}. Найдено реакций: ${summary.found_reactions}.`, { type: "success" });
+      const skipped = summary.skipped_messages > 0 ? ` Не удалось проверить сообщений: ${summary.skipped_messages}.` : "";
+      notify(`Проверено сообщений: ${summary.checked_messages}. Найдено реакций: ${summary.found_reactions}.${skipped}`, { type: "success" });
       await refetchResults();
     } catch (error) {
       notify(error instanceof Error ? error.message : "Не удалось синхронизировать реакции", { type: "error" });

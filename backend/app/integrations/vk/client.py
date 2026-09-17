@@ -233,27 +233,6 @@ class VkClient:
                 return message["conversation_message_id"]
         raise VkApiError("VK message was not found")
 
-    async def find_message_conversation_id(self, peer_id: int, broadcast_token: str) -> int | None:
-        response = await self.api(
-            "messages.getHistory",
-            peer_id=peer_id,
-            count=200,
-            group_id=self.group_id,
-        )
-        items = response.get("items") if isinstance(response, dict) else None
-        if not isinstance(items, list):
-            raise VkApiError("VK history response is invalid")
-        for message in items:
-            if not isinstance(message, dict):
-                continue
-            payload = message.get("payload")
-            if not isinstance(payload, str) or broadcast_token not in payload:
-                continue
-            conversation_message_id = message.get("conversation_message_id")
-            if isinstance(conversation_message_id, int) and conversation_message_id > 0:
-                return conversation_message_id
-        return None
-
     async def get_reacted_peers(self, peer_id: int, conversation_message_id: int) -> list[int]:
         response = await self.api(
             "messages.getReactedPeers",

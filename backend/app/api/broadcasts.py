@@ -108,6 +108,7 @@ class BroadcastDeliveryResponse(BaseModel):
 
 class ReactionSyncResponse(BaseModel):
     checked_messages: int
+    skipped_messages: int
     found_reactions: int
     recorded_responses: int
 

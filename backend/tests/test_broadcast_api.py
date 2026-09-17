@@ -167,6 +167,7 @@ def test_sync_broadcast_reactions(monkeypatch: MonkeyPatch) -> None:
     async def fake_sync(*_: object) -> dict[str, int]:
         return {
             "checked_messages": 2,
+            "skipped_messages": 0,
             "found_reactions": 3,
             "recorded_responses": 3,
         }
@@ -183,6 +184,7 @@ def test_sync_broadcast_reactions(monkeypatch: MonkeyPatch) -> None:
     assert response.status_code == 200
     assert response.json() == {
         "checked_messages": 2,
+        "skipped_messages": 0,
         "found_reactions": 3,
         "recorded_responses": 3,
     }

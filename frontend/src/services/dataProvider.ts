@@ -25,6 +25,7 @@ export function retryDelivery(broadcastId: number, outboundId: number) {
 
 export function syncBroadcastReactions(broadcastId: number): Promise<{
   checked_messages: number;
+  skipped_messages: number;
   found_reactions: number;
   recorded_responses: number;
 }> {
