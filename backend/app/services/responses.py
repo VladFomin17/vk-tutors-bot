@@ -213,12 +213,26 @@ async def sync_reactions(client: VkClient, broadcast_id: int) -> dict[str, int]:
     recorded_responses = 0
     for target in targets:
         conversation_message_id = target["conversation_message_id"]
-        if conversation_message_id is None and target["vk_message_id"] is not None:
+        if (
+            conversation_message_id is None
+            and isinstance(target["vk_message_id"], int)
+            and target["vk_message_id"] > 0
+        ):
             conversation_message_id = await client.get_message_conversation_id(
                 target["vk_message_id"]
             )
+        if conversation_message_id is None:
+            conversation_message_id = await client.find_message_conversation_id(
+                target["peer_id"], target["broadcast_token"]
+            )
+        if isinstance(conversation_message_id, int):
             await outbox.remember_delivery(
-                vk_message_id=target["vk_message_id"],
+                vk_message_id=(
+                    target["vk_message_id"]
+                    if isinstance(target["vk_message_id"], int)
+                    and target["vk_message_id"] > 0
+                    else 0
+                ),
                 conversation_message_id=conversation_message_id,
                 broadcast_token=target["broadcast_token"],
             )

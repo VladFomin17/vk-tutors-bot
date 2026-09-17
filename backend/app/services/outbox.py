@@ -219,13 +219,15 @@ async def remember_delivery(
     broadcast_token: str,
 ) -> None:
     async with session_factory.begin() as session:
+        values: dict[str, object] = {
+            "conversation_message_id": conversation_message_id,
+        }
+        if vk_message_id > 0:
+            values["vk_message_id"] = vk_message_id
         await session.execute(
             update(OutboundMessage)
             .where(OutboundMessage.broadcast_token == broadcast_token)
-            .values(
-                vk_message_id=vk_message_id,
-                conversation_message_id=conversation_message_id,
-            )
+            .values(**values)
         )
 
 
