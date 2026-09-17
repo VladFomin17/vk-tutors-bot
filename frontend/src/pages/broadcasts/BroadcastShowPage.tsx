@@ -3,6 +3,7 @@ import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import SearchIcon from "@mui/icons-material/Search";
+import SyncIcon from "@mui/icons-material/Sync";
 import {
   Box,
   Button,
@@ -36,7 +37,7 @@ import { PageHeader } from "../../components/PageHeader";
 import { QueryErrorState } from "../../components/QueryErrorState";
 import { SectionCard } from "../../components/SectionCard";
 import { BroadcastStatusChip } from "../../components/StatusChip";
-import { retryDelivery } from "../../services/dataProvider";
+import { retryDelivery, syncBroadcastReactions } from "../../services/dataProvider";
 import type { Broadcast, BroadcastDelivery, BroadcastResult, DeliveryStage, DeliveryStatus } from "../../types/entities";
 import { formatDateTime } from "../../utils/date";
 
@@ -55,6 +56,7 @@ export function BroadcastShowPage() {
   const [group, setGroup] = useState("all");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<number | null>(null);
+  const [syncingReactions, setSyncingReactions] = useState(false);
   const respondedCount = results.filter((result) => result.responded).length;
   const completion = results.length === 0 ? 0 : Math.round((respondedCount / results.length) * 100);
   const groups = [...new Set(results.map((result) => result.study_group_name))].sort();
@@ -81,6 +83,19 @@ export function BroadcastShowPage() {
     }
   }
 
+  async function syncReactions() {
+    setSyncingReactions(true);
+    try {
+      const summary = await syncBroadcastReactions(broadcastId);
+      notify(`Проверено сообщений: ${summary.checked_messages}. Найдено реакций: ${summary.found_reactions}.`, { type: "success" });
+      await refetchResults();
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Не удалось синхронизировать реакции", { type: "error" });
+    } finally {
+      setSyncingReactions(false);
+    }
+  }
+
   return (
     <Stack spacing={3}>
       <Title title={broadcast?.title ?? "Результаты рассылки"} />
@@ -88,6 +103,9 @@ export function BroadcastShowPage() {
       {broadcastsError || resultsError || deliveriesError ? <QueryErrorState message="Не удалось загрузить данные рассылки." onRetry={() => Promise.all([refetchBroadcasts(), refetchResults(), refetchDeliveries()])} /> : null}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
         <Button component={Link} startIcon={<ArrowBackIcon />} to="/broadcasts">К рассылкам</Button>
+        <Button disabled={syncingReactions} onClick={syncReactions} startIcon={<SyncIcon />} variant="outlined">
+          {syncingReactions ? "Проверяем реакции…" : "Загрузить реакции"}
+        </Button>
         <Button component="a" href={`/api/v1/broadcasts/${broadcastId}/export.xlsx`} startIcon={<DownloadOutlinedIcon />} variant="outlined">XLSX</Button>
         <Button component="a" href={`/api/v1/broadcasts/${broadcastId}/export.docx`} startIcon={<DownloadOutlinedIcon />} variant="outlined">DOCX</Button>
       </Stack>

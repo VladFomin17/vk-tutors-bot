@@ -161,3 +161,28 @@ def test_retry_rejects_non_failed_delivery(monkeypatch: MonkeyPatch) -> None:
         app.dependency_overrides.clear()
 
     assert response.status_code == 409
+
+
+def test_sync_broadcast_reactions(monkeypatch: MonkeyPatch) -> None:
+    async def fake_sync(*_: object) -> dict[str, int]:
+        return {
+            "checked_messages": 2,
+            "found_reactions": 3,
+            "recorded_responses": 3,
+        }
+
+    app.dependency_overrides[require_admin] = lambda: None
+    monkeypatch.setattr(broadcasts.responses, "sync_reactions", fake_sync)
+    monkeypatch.setattr(broadcasts, "build_client", lambda *_: object())
+    try:
+        with TestClient(app) as client:
+            response = client.post("/api/v1/broadcasts/7/sync-reactions")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "checked_messages": 2,
+        "found_reactions": 3,
+        "recorded_responses": 3,
+    }

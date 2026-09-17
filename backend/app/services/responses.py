@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import Insert, insert
 from sqlalchemy.sql import Select
 
 from app.db.session import session_factory
+from app.integrations.vk.client import VkClient
 from app.models import (
     Broadcast,
     BroadcastRecipient,
@@ -18,6 +19,7 @@ from app.models import (
     VkChat,
     VkUser,
 )
+from app.services import outbox
 from app.services.media import MediaJob
 
 
@@ -195,6 +197,58 @@ async def list_results(broadcast_id: int) -> list[dict[str, object]]:
             }
             for row in rows
         ]
+
+
+async def sync_reactions(client: VkClient, broadcast_id: int) -> dict[str, int]:
+    async with session_factory() as session:
+        deadline = await session.scalar(
+            select(Broadcast.deadline).where(Broadcast.id == broadcast_id)
+        )
+    if deadline is None:
+        raise BroadcastNotFoundError("Broadcast not found")
+
+    targets = await outbox.list_reaction_targets(broadcast_id)
+    checked_messages = 0
+    found_reactions = 0
+    recorded_responses = 0
+    for target in targets:
+        conversation_message_id = target["conversation_message_id"]
+        if conversation_message_id is None and target["vk_message_id"] is not None:
+            conversation_message_id = await client.get_message_conversation_id(
+                target["vk_message_id"]
+            )
+            await outbox.remember_delivery(
+                vk_message_id=target["vk_message_id"],
+                conversation_message_id=conversation_message_id,
+                broadcast_token=target["broadcast_token"],
+            )
+        if not isinstance(conversation_message_id, int):
+            continue
+
+        checked_messages += 1
+        user_ids = await client.get_reacted_peers(
+            target["peer_id"], conversation_message_id
+        )
+        found_reactions += len(user_ids)
+        for user_id in user_ids:
+            result = await record_confirmation(
+                peer_id=target["peer_id"],
+                vk_user_id=user_id,
+                vk_message_id=0,
+                conversation_message_id=conversation_message_id,
+                responded_at=datetime.now(UTC),
+                text="",
+                attachments=[],
+                broadcast_token=target["broadcast_token"],
+            )
+            if result.status in {"accepted", "duplicate", "outdated"}:
+                recorded_responses += 1
+
+    return {
+        "checked_messages": checked_messages,
+        "found_reactions": found_reactions,
+        "recorded_responses": recorded_responses,
+    }
 
 
 def _results_query(broadcast_id: int) -> Select[Any]:

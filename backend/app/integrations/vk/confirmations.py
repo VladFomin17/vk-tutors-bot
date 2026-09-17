@@ -38,7 +38,7 @@ def parse_confirmation(
     reply = message.get("reply_message")
     if not isinstance(reply, dict) or reply.get("from_id") != -group_id:
         return None
-    token = _read_token(reply.get("payload"))
+    token = read_broadcast_token(reply.get("payload"))
     if token is None:
         return None
 
@@ -86,10 +86,10 @@ def parse_outbound_message(
     if update.get("type") != "message_reply":
         return None
     event_object = update.get("object")
-    message = event_object.get("message") if isinstance(event_object, dict) else None
+    message = event_object.get("message", event_object) if isinstance(event_object, dict) else None
     if not isinstance(message, dict) or message.get("from_id") != -group_id:
         return None
-    token = _read_token(message.get("payload"))
+    token = read_broadcast_token(message.get("payload"))
     vk_message_id = message.get("id")
     conversation_message_id = message.get("conversation_message_id")
     if not (
@@ -108,7 +108,7 @@ def _parse_reaction(update: dict[str, Any]) -> ConfirmationEvent | None:
         return None
     peer_id = event_object.get("peer_id")
     conversation_message_id = event_object.get("cmid")
-    vk_user_id = event_object.get("reacted_user_id")
+    vk_user_id = event_object.get("reacted_id")
     reaction_id = event_object.get("reaction_id")
     if not (
         isinstance(peer_id, int)
@@ -133,7 +133,7 @@ def _parse_reaction(update: dict[str, Any]) -> ConfirmationEvent | None:
     )
 
 
-def _read_token(payload: object) -> str | None:
+def read_broadcast_token(payload: object) -> str | None:
     if isinstance(payload, str):
         try:
             payload = json.loads(payload)

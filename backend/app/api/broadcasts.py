@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator
 from starlette.responses import FileResponse, StreamingResponse
 
 from app.core.config import get_settings
+from app.integrations.vk.client import VkApiError, build_client
 from app.services import broadcasts
 from app.services import exports
 from app.services import media
@@ -105,6 +106,12 @@ class BroadcastDeliveryResponse(BaseModel):
     reminder: DeliveryStageResponse | None
 
 
+class ReactionSyncResponse(BaseModel):
+    checked_messages: int
+    found_reactions: int
+    recorded_responses: int
+
+
 @router.get("/broadcasts", response_model=list[BroadcastSummaryResponse])
 async def get_broadcasts() -> list[dict[str, object]]:
     return await broadcasts.list_broadcasts()
@@ -128,6 +135,26 @@ async def get_broadcast_results(broadcast_id: int) -> list[dict[str, object]]:
         return await responses.list_results(broadcast_id)
     except responses.BroadcastNotFoundError as error:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
+
+
+@router.post(
+    "/broadcasts/{broadcast_id}/sync-reactions",
+    response_model=ReactionSyncResponse,
+)
+async def sync_broadcast_reactions(broadcast_id: int) -> dict[str, int]:
+    try:
+        result = await responses.sync_reactions(build_client(get_settings()), broadcast_id)
+    except responses.BroadcastNotFoundError as error:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
+    except VkApiError as error:
+        logger.exception("Failed to synchronize reactions for broadcast %s", broadcast_id)
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(error)) from error
+    logger.info(
+        "Synchronized reactions for broadcast %s: %s",
+        broadcast_id,
+        result,
+    )
+    return result
 
 
 @router.get(

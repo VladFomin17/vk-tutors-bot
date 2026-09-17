@@ -129,6 +129,30 @@ async def list_deliveries(broadcast_id: int) -> list[dict[str, object]]:
     return list(deliveries.values())
 
 
+async def list_reaction_targets(broadcast_id: int) -> list[dict[str, object]]:
+    async with session_factory() as session:
+        rows = (
+            await session.execute(
+                select(
+                    OutboundMessage.id,
+                    OutboundMessage.kind,
+                    OutboundMessage.broadcast_token,
+                    OutboundMessage.vk_message_id,
+                    OutboundMessage.conversation_message_id,
+                    VkChat.peer_id,
+                )
+                .join(BroadcastTarget, BroadcastTarget.id == OutboundMessage.target_id)
+                .join(VkChat, VkChat.id == BroadcastTarget.chat_id)
+                .where(
+                    BroadcastTarget.broadcast_id == broadcast_id,
+                    OutboundMessage.status == "sent",
+                )
+                .order_by(OutboundMessage.id)
+            )
+        ).mappings()
+        return [dict(row) for row in rows]
+
+
 async def retry_failed(broadcast_id: int, outbound_id: int) -> dict[str, object]:
     now = datetime.now(UTC)
     async with session_factory.begin() as session:

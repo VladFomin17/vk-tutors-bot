@@ -197,6 +197,61 @@ class VkClient:
             raise VkApiError("VK send response is invalid")
         return response
 
+    async def get_message_payload(self, peer_id: int, conversation_message_id: int) -> object:
+        response = await self.api(
+            "messages.getByConversationMessageId",
+            peer_id=peer_id,
+            conversation_message_ids=str(conversation_message_id),
+            group_id=self.group_id,
+        )
+        items = response.get("items") if isinstance(response, dict) else None
+        if not isinstance(items, list):
+            raise VkApiError("VK message response is invalid")
+        for message in items:
+            if (
+                isinstance(message, dict)
+                and message.get("conversation_message_id") == conversation_message_id
+            ):
+                return message.get("payload")
+        raise VkApiError("VK message was not found")
+
+    async def get_message_conversation_id(self, message_id: int) -> int:
+        response = await self.api(
+            "messages.getById",
+            message_ids=str(message_id),
+            group_id=self.group_id,
+        )
+        items = response.get("items") if isinstance(response, dict) else None
+        if not isinstance(items, list):
+            raise VkApiError("VK message response is invalid")
+        for message in items:
+            if (
+                isinstance(message, dict)
+                and message.get("id") == message_id
+                and isinstance(message.get("conversation_message_id"), int)
+            ):
+                return message["conversation_message_id"]
+        raise VkApiError("VK message was not found")
+
+    async def get_reacted_peers(self, peer_id: int, conversation_message_id: int) -> list[int]:
+        response = await self.api(
+            "messages.getReactedPeers",
+            peer_id=peer_id,
+            cmid=conversation_message_id,
+        )
+        if not isinstance(response, dict):
+            raise VkApiError("VK reactions response is invalid")
+        items = response.get("reactions", response.get("peers", []))
+        if not isinstance(items, list):
+            raise VkApiError("VK reactions response is invalid")
+        return [
+            user_id
+            for item in items
+            if isinstance(item, dict)
+            for user_id in [item.get("peer_id", item.get("user_id"))]
+            if isinstance(user_id, int) and user_id > 0
+        ]
+
     async def get_long_poll_endpoint(self) -> LongPollEndpoint:
         response = await self.api("groups.getLongPollServer", group_id=self.group_id)
         if not isinstance(response, dict):

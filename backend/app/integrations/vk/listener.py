@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 
@@ -15,7 +16,11 @@ from app.integrations.vk.client import (
     VkClient,
     build_client,
 )
-from app.integrations.vk.confirmations import parse_confirmation, parse_outbound_message
+from app.integrations.vk.confirmations import (
+    parse_confirmation,
+    parse_outbound_message,
+    read_broadcast_token,
+)
 from app.integrations.vk.media import store_images
 from app.services.chat_directory import (
     list_chats_missing_titles,
@@ -81,6 +86,20 @@ async def handle_update(client: VkClient, update: dict[str, Any]) -> None:
         if message is None:
             await mark_chat_activity(confirmation.peer_id, confirmation.responded_at)
         result = await record_confirmation(**vars(confirmation))
+        if result.status == "ignored" and confirmation.broadcast_token is None:
+            payload = await client.get_message_payload(
+                confirmation.peer_id,
+                confirmation.conversation_message_id,
+            )
+            token = read_broadcast_token(payload)
+            if token is not None:
+                await remember_delivery(
+                    vk_message_id=0,
+                    conversation_message_id=confirmation.conversation_message_id,
+                    broadcast_token=token,
+                )
+                confirmation = replace(confirmation, broadcast_token=token)
+                result = await record_confirmation(**vars(confirmation))
         settings = get_settings()
         remove_files(settings.media_root, list(result.obsolete_storage_names))
         if result.media_job is not None:

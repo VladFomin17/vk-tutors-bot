@@ -23,6 +23,14 @@ export function retryDelivery(broadcastId: number, outboundId: number) {
   });
 }
 
+export function syncBroadcastReactions(broadcastId: number): Promise<{
+  checked_messages: number;
+  found_reactions: number;
+  recorded_responses: number;
+}> {
+  return api(`/broadcasts/${broadcastId}/sync-reactions`, { method: "POST" });
+}
+
 function unsupported(): never {
   throw new Error("Operation is not supported");
 }

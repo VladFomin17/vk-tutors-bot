@@ -44,7 +44,7 @@ def test_parse_reaction_confirmation() -> None:
         "object": {
             "peer_id": 2_000_000_001,
             "cmid": 42,
-            "reacted_user_id": 123,
+            "reacted_id": 123,
             "reaction_id": 1,
         },
     }
@@ -63,12 +63,10 @@ def test_parse_outbound_message_for_reaction_lookup() -> None:
     update = {
         "type": "message_reply",
         "object": {
-            "message": {
-                "from_id": -7,
-                "id": 0,
-                "conversation_message_id": 42,
-                "payload": json.dumps({"broadcast_token": "token"}),
-            }
+            "from_id": -7,
+            "id": 0,
+            "conversation_message_id": 42,
+            "payload": json.dumps({"broadcast_token": "token"}),
         },
     }
 
