@@ -53,3 +53,4 @@
 - Empty React Admin screen caused by missing resource registration.
 - VK chat titles are restored for chats discovered through Long Poll.
 - Broadcasts can be created for test chats without classified students.
+- Экспорт результатов рассылки теперь использует ручное полное ФИО студентов из админки.

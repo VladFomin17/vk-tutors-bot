@@ -14,6 +14,7 @@ def test_exports_contain_result_data() -> None:
             "vk_user_id": 123,
             "first_name": "Иван",
             "last_name": "Иванов",
+            "full_name": "Иванов Иван Иванович",
             "responded": True,
             "text": "Готово",
             "attachments": [],
@@ -25,6 +26,7 @@ def test_exports_contain_result_data() -> None:
             "vk_user_id": 456,
             "first_name": "Пётр",
             "last_name": "Петров",
+            "full_name": None,
             "responded": False,
             "text": None,
             "attachments": [],
@@ -36,10 +38,10 @@ def test_exports_contain_result_data() -> None:
     workbook = load_workbook(BytesIO(create_xlsx("Опрос", results)))
     document = Document(BytesIO(create_docx(results)))
 
-    assert workbook.active["C3"].value == "Иванов Иван"
+    assert workbook.active["C3"].value == "Иванов Иван Иванович"
     assert [paragraph.text for paragraph in document.paragraphs] == [
         "ИВТ-1",
-        "Иванов",
+        "Иванов Иван Иванович",
         "ИВТ-2",
         "-",
     ]

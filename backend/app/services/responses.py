@@ -273,6 +273,7 @@ def _results_query(broadcast_id: int) -> Select[Any]:
             VkUser.vk_user_id,
             VkUser.first_name,
             VkUser.last_name,
+            VkUser.full_name,
             BroadcastResponse.text,
             BroadcastResponse.attachments,
             BroadcastResponse.responded_at,

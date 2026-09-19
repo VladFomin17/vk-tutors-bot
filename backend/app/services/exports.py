@@ -55,9 +55,9 @@ def create_docx(results: Sequence[Mapping[str, object]]) -> bytes:
     for group_name, members in groups.items():
         heading = document.add_paragraph()
         heading.add_run(group_name).bold = True
-        surnames = [str(member["last_name"]) for member in members if member["responded"]]
-        for surname in surnames or ["-"]:
-            document.add_paragraph(surname)
+        names = [_student_name(member) for member in members if member["responded"]]
+        for name in names or ["-"]:
+            document.add_paragraph(name)
 
     output = BytesIO()
     document.save(output)
@@ -70,12 +70,19 @@ def _row(result: Mapping[str, object]) -> tuple[object, ...]:
     return (
         result["study_group_name"],
         result["vk_user_id"],
-        f"{result['last_name']} {result['first_name']}",
+        _student_name(result),
         _status(result),
         result.get("text") or "",
         _format_datetime(responded_at),
         "\n".join(_photo_urls(attachments)),
     )
+
+
+def _student_name(result: Mapping[str, object]) -> str:
+    full_name = result.get("full_name")
+    if isinstance(full_name, str) and full_name.strip():
+        return full_name
+    return f"{result['last_name']} {result['first_name']}"
 
 
 def _status(result: Mapping[str, object]) -> str:
